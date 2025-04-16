@@ -27,3 +27,7 @@ llm = ChatOpenAI(
 async def chat(req: ChatRequest):
     response = llm.invoke([HumanMessage(content=req.message)])
     return {"reply": response.content}
+
+@app.get("/")
+def read_root():
+    return {"message": f"Deploy Test"}
