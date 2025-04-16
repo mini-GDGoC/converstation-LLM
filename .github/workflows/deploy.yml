@@ -1,0 +1,32 @@
+name: 🚀 Deploy FastAPI with Docker Compose to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy via SSH
+      run: |
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e
+          cd ~/fastapi-app || git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ~/fastapi-app && cd ~/fastapi-app
+          git pull origin main
+
+          # Docker Compose로 재빌드 및 재시작
+          docker-compose down
+          docker-compose up --build -d
+        EOF
