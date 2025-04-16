@@ -30,4 +30,4 @@ async def chat(req: ChatRequest):
 
 @app.get("/")
 def read_root():
-    return {"message": f"Deploy Test"}
+    return {"message": f"Update"}
