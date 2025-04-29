@@ -18,7 +18,7 @@ class ChatRequest(BaseModel):
 
 # LLM 설정 (OpenAI)
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo",  # 또는 "gpt-4", "gpt-4o"
+    model="gpt-3.5-turbo",  # 또는 "gpt-4", "gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano"
     temperature=0.7,
     api_key=os.getenv("OPENAI_API_KEY")  # 여기에 .env 키 들어감
 )
