@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from modules.llm_model import init_model, get_model
+from modules.database import get_db
+from modules.models import MenuItem
 import os
 
 from langchain_openai import ChatOpenAI
@@ -32,6 +34,11 @@ async def startup():
     init_model()
     print("Model init")
     # print(get_model().invoke("하이")) #실제 모델 동작 하는지 테스트 (주석 처리 해놓지 않으면 리로드 할 때마다 계속 호출 해서 api 사용량 까먹음)
+
+    db = get_db()
+    print("DB init")
+    # for i in db.query(MenuItem).all():
+    #     print(i.id, i.parent_id, i.name, i.description, i.emoji, i.keywords)
 
 
 @app.post("/chat")
