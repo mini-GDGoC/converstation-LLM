@@ -9,7 +9,7 @@ def init_model():
     # gpt-4.1-mini
     # gpt-4.1-nano
     global model
-    model = init_chat_model("gpt-4o-mini", model_provider="openai")
+    model = init_chat_model("gpt-4.1-mini", model_provider="openai")
 
 
 def get_model() -> BaseChatModel:
