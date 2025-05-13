@@ -8,6 +8,11 @@ import os
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from fastapi.responses import JSONResponse
+from langchain_core.messages import BaseMessage
+from langchain.prompts import PromptTemplate
 
 # .env 불러오기
 load_dotenv()
@@ -40,12 +45,46 @@ async def startup():
     # for i in db.query(MenuItem).all():
     #     print(i.id, i.parent_id, i.name, i.description, i.emoji, i.keywords)
 
+custom_prompt = PromptTemplate.from_template(""" 
+                                             너는 디지털 기기 사용을 어려워 하시는 노인들을 도와주는 AI야.
+                                             너는 절대 딱딱하게 말하지 않고, 부드러운 말투로 이야기해. 존댓말을 사용해야 해.
+                                             영어로 된 단어들은 최대한 한국어로 풀어서 이해하기 쉽게 설명해줘.
+                                            
+                                             대화 기록:
+                                             {history}
+                                             사용자: {input}
+                                             AI:
+                                             """)
+
+# 새 ConversationChain 생성
+memory = ConversationBufferMemory(return_messages=True)
+
+conversation = ConversationChain(
+    llm=llm,
+    memory=memory,
+    prompt=custom_prompt,
+    verbose=True
+)
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    response = llm.invoke([HumanMessage(content=req.message)])
-    return {"reply": response.content}
+    response = conversation.predict(input=req.message)
+    return {"reply": response}
 
+@app.get("/chat-history")
+async def chat_history():
+    history = [
+        {"role": m.type, "content": m.content}
+        for m in memory.chat_memory.messages
+    ]
+    return JSONResponse(content={"history": history})
+
+
+# 결제 완료 되면 memory 초기화
+@app.post("/reset-chat")
+async def reset_chat():
+    memory.clear()
+    return {"message": "대화 내용이 초기화되었습니다."}
 
 @app.get("/")
 def read_root():
