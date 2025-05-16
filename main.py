@@ -1,4 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
+import cv2
+import numpy as np
+import easyocr
+from PIL import Image
+import io
+import time
+import pytesseract
+
+import matplotlib.pyplot as plt
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from modules.llm_model import init_model, get_model
@@ -20,10 +30,13 @@ load_dotenv()
 # FastAPI 인스턴스
 app = FastAPI()
 
+# ocr reader
+reader = easyocr.Reader(['ko', 'en'])
 
 # 요청 바디 모델
 class ChatRequest(BaseModel):
     message: str
+    visible_buttons: list[str] = []
 
 
 # LLM 설정 (OpenAI)
@@ -94,8 +107,11 @@ async def startup():
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
+    start_time = time.time()
     response = conversation.predict(input=req.message)
-    return {"reply": response}
+    total_time = round(time.time() - start_time, 4)
+
+    return JSONResponse(content={"response": response, "process_time": total_time})
 
 @app.get("/chat-history")
 async def chat_history():
@@ -115,3 +131,60 @@ async def reset_chat():
 @app.get("/")
 def read_root():
     return {"message": f"Update"}
+
+@app.post("/ocr-test")
+async def ocr_test(file: UploadFile = File(...)):
+    start_time = time.time()
+    # image load
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image_np = np.array(image)
+
+    # opencv용 bgr로 변환
+    image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+
+    # 3. CLAHE 객체 생성 (clipLimit 높일수록 대비 강해짐)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    contrast_enhanced = clahe.apply(gray)
+
+    # 밝은 영역만 마스킹 (threshold 적용)
+    _, bright_mask = cv2.threshold(contrast_enhanced, 100, 255, cv2.THRESH_BINARY)
+    bright_only = cv2.bitwise_and(image_bgr, image_bgr, mask=bright_mask)
+    bright_rgb = cv2.cvtColor(bright_only, cv2.COLOR_BGR2RGB)
+
+    # detect text and position
+    results = reader.readtext(bright_rgb)
+
+    buttons = []
+    for (bbox, text, prob) in results:
+        if prob > 0.5:  # 신뢰도 기준
+            (tl, tr, br, bl) = bbox
+            x_min = int(min(tl[0], bl[0]))
+            y_min = int(min(tl[1], tr[1]))
+            x_max = int(max(tr[0], br[0]))
+            y_max = int(max(bl[1], br[1]))
+            buttons.append({
+                "text": text,
+                "bbox": {
+                    "x": x_min,
+                    "y": y_min,
+                    "width": x_max - x_min,
+                    "height": y_max - y_min
+                }
+            })
+
+    visible_button_texts = [b['text'] for b in buttons]
+    conversation.prompt.partial_variables = {"visible_buttons": ', '.join(visible_button_texts)}
+
+    # LLM에게 질문 추천 요청
+    question_prompt = f"지금 화면에 보이는 메뉴 항목은 다음과 같아: {', '.join(visible_button_texts)}. 이걸 보고 어르신에게 어떤 질문을 하면 좋을까? 한문장 정도의 질문으로 해줘."
+    suggested_question = conversation.predict(input=question_prompt)
+
+    total_time = round(time.time() - start_time, 4)
+    return JSONResponse(content={
+        "buttons": buttons,
+        "suggested_question": suggested_question,
+        "process_time": total_time
+    })
