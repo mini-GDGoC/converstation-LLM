@@ -13,6 +13,8 @@ from langchain.memory import ConversationBufferMemory
 from fastapi.responses import JSONResponse
 from langchain_core.messages import BaseMessage
 from langchain.prompts import PromptTemplate
+from modules.tts import get_tts, TTS_testReq
+from modules.stt import get_stt, STT_testReq
 
 # .env 불러오기
 load_dotenv()
@@ -115,3 +117,14 @@ async def reset_chat():
 @app.get("/")
 def read_root():
     return {"message": f"Update"}
+
+
+@app.post("/test_tts")
+async def test_tts(req: TTS_testReq):
+    return get_tts(req.fileName, req.text)
+
+
+
+@app.post("/stt-test")
+async def stt_test(req: STT_testReq):
+    return get_stt(req.ileName)
