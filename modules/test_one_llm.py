@@ -10,7 +10,7 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from modules.database import get_menu_info
+from modules.database import get_menu_info, get_menu_info_for_prompt
 
 
 # .env 불러오기
@@ -26,7 +26,7 @@ llm = ChatOpenAI(
 store = {}
 
 # 메뉴 디비
-menu_db = get_menu_info()
+menu_db = get_menu_info_for_prompt()
 
 def get_session_state(session_id: str):
     if session_id not in store:
@@ -76,8 +76,9 @@ prompt = ChatPromptTemplate.from_messages([
 - 현재 화면의 버튼들을 보고 어르신께 무엇을 도와드릴지 친근하게 물어보세요
 - "안녕하세요, 어르신! 오늘은 무엇을 드시고 싶으신가요?" 같은 자연스러운 질문을 해주세요
 - **메뉴 선택 화면에서는 메뉴 데이터베이스의 계층 구조를 최우선으로 따라서 선택지를 제시해주세요**
-- 최상위 카테고리(parent_id가 비어있는 항목들)부터 시작하여 이모지와 함께 친근하게 안내해주세요
-- 이때는 matched_button을 반드시 null로 설정해주세요
+- 최상위 카테고리(parent_id가 비어있는 항목들)설정해주세요부터 시작하여 이모지와 함께 친근하게 안내해주세요
+- 이때는 matched_button을 반드시 null로 
+- `visible_button`의 요소를 `choices`로 반환해주세요.
 
 ### 상황 2: 어르신이 말씀해주셨을 때 (input이 존재함)
 
@@ -93,12 +94,13 @@ prompt = ChatPromptTemplate.from_messages([
 - 설명 후에는 "이 메뉴로 주문하시겠어요?" 같은 후속 질문을 꼭 해주세요
 - 이 경우 matched_button은 null로, follow_up_question에는 설명과 후속 질문을, choices에는 관련 선택지를 제시해주세요
 
-#### 2-2. 화면의 버튼과 일치하는 경우
-- 어르신 말씀과 화면 버튼이 의미상 연결되는지 확인해주세요
-  * 예시: "햄버거 주세요" ↔ "빅맥 세트", "콜라 주세요" ↔ "코카콜라", "큰 걸로" ↔ "라지 사이즈"
-- **메뉴 선택의 경우, 메뉴 데이터베이스의 계층 구조를 우선적으로 고려해주세요**
-- keywords를 활용하여 사용자 발화와 매칭되는 메뉴를 찾아주세요
-- 일치한다면 해당 버튼을 matched_button으로 반환하고, follow_up_question과 choices는 비워주세요
+#### 2-2. 화면의 버튼과 일치하는 경우 (가장 우선시해야 함)
+- 어르신 말씀과 현재 화면의 버튼 중 하나가 의미상 연결되거나 유사하다면 **가장 먼저 matched_button으로 간주해야 합니다**
+  * 예시: "햄버거" ↔ "버거", "치즈스틱" ↔ "치즈 간식"
+- 이때는 메뉴 계층 탐색보다 **버튼 매칭이 우선**입니다.
+- 매칭 판단 시에는 버튼의 텍스트뿐 아니라 name, description, keywords를 참고하여 유사한 의미로 판단되면 됩니다.
+- 일치한다면 반드시 해당 버튼을 `matched_button`으로 반환하고, `follow_up_question`과 `choices`는 비워주세요.
+- **이 경우에는 절대 계층 탐색이나 설명을 먼저 시도하지 마세요.**
 
 #### 2-3. 화면의 버튼과 일치하지 않는 경우
 - 어르신의 의도를 더 구체적으로 파악하기 위해 추가 질문을 해주세요
@@ -148,15 +150,15 @@ prompt = ChatPromptTemplate.from_messages([
 ## 중요 규칙
 1. **메뉴 선택 시에는 메뉴 데이터베이스의 계층 구조를 최우선으로 따라야 합니다**
 2. **메뉴에 대한 질문이 있으면 description, keywords, name, emoji를 활용하여 친절하고 자세하게 설명해드려야 합니다**
-3. **keywords 배열을 적극 활용하여 사용자 발화와 메뉴를 정확하게 매칭해주세요**
-4. **이모지를 포함하여 시각적으로 친근하게 안내해주세요**
+3. keywords 배열을 적극 활용하여 사용자 발화와 메뉴를 정확하게 매칭해주세요
+4. 이모지를 포함하여 시각적으로 친근하게 안내해주세요
 5. matched_button이 있으면 follow_up_question과 choices는 반드시 비워야 합니다
 6. matched_button이 없으면 follow_up_question과 choices를 반드시 제공해야 합니다
 7. 모든 대화는 어르신을 배려하는 정중하고 친근한 톤으로 해주세요
 8. 복잡한 기술 용어나 외래어는 피하고 쉬운 우리말로 설명해주세요
 9. 메뉴 설명 시에는 어르신들이 이해하기 쉬운 친숙한 음식과 비교해서 설명해주세요
 10. **계층 탐색 시 parent_id 관계를 정확히 활용하여 단계별로 안내해주세요**
-
+11. **visible_buttons 중 의미상 유사한 버튼이 있다면 무조건 matched_button으로 반환해야 하며, 계층 탐색은 생략해야 합니다**
     """),
     MessagesPlaceholder(variable_name="history"),
     ("human", "{input}")
@@ -192,7 +194,7 @@ async def handle_screen_input(request: QuestionRequest):
                 "visible_buttons": visible_buttons_str,
                 "question": "",
                 "screen_type": "",
-                "menu_db": menu_db,
+                "menu_db": menu_db['hierarchy_text'],
             },
             config={"configurable": {"session_id": "default_session"}}
         )
@@ -222,7 +224,7 @@ async def handle_user_input(request: ButtonRequest):
                 "visible_buttons": visible_buttons_str,
                 "question": session["question"],
                 "screen_type": session["screen_type"],
-                "menu_db": menu_db,
+                "menu_db": menu_db['hierarchy_text'],
             },
             config={"configurable": {"session_id": "default_session"}}
         )
