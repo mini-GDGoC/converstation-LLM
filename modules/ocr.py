@@ -106,9 +106,11 @@ async def run_ocr(file: UploadFile = File(...)):
             "count": len(group)
         })
 
+    sidebar_img, box = detect_right_sidebar(image_np)
     return JSONResponse(content={
         "groups": merged_groups,
-        "count": len(buttons)
+        "count": len(buttons),
+        "sidebar_exists": box
     })
 
 # 프로젝트가 완료될때까지 지우시마시오. 언제 이 방법으로 돌아갈지 모름 !!
@@ -158,3 +160,31 @@ async def run_ocr(file: UploadFile = File(...)):
 #     return JSONResponse(content={
 #         "buttons": buttons,
 #     })
+
+def detect_right_sidebar(image_np, sidebar_width=30, gray_min=100, gray_max=200, min_height_ratio=0.5):
+    """
+    이미지에서 회색 계열의 사이드바(스크롤바 등)를 찾아 bounding box 추출
+    """
+    h, w = image_np.shape[:2]
+    gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+
+    # 회색 계열 마스크 만들기
+    mask = cv2.inRange(gray, gray_min, gray_max)
+
+    # 윤곽선 탐지
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    sidebar_boxes = []
+
+    for cnt in contours:
+        x, y, ww, hh = cv2.boundingRect(cnt)
+        if hh > h * min_height_ratio and ww > 5:
+            sidebar_boxes.append((x, y, ww, hh))
+
+    # 가장 오른쪽에 있는 박스를 사이드바로 간주
+    if sidebar_boxes:
+        sidebar = max(sidebar_boxes, key=lambda box: box[0])
+        x, y, ww, hh = sidebar
+        sidebar_img = image_np[y:y+hh, x:x+ww]
+        return sidebar_img, (x, y, ww, hh)
+    else:
+        return None, None
