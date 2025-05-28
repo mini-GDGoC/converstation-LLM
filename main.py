@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 import io
 import time
+import json
 
 
 import matplotlib.pyplot as plt
@@ -40,8 +41,6 @@ load_dotenv()
 app = FastAPI()
 
 
-
-
 @app.on_event("startup")
 async def startup():
     init_model()
@@ -68,7 +67,6 @@ async def test_tts(req: TTS_testReq):
 async def stt_test(req: STT_testReq):
     return get_stt(req.fileName)
 
-# easyocr
 @app.post("/ocr-test")
 async def ocr_test(file: UploadFile = File(...)):
     return await run_ocr(file)
@@ -85,3 +83,34 @@ async def reset_button_llm():
 @app.post("/divide_question/chat") 
 async def divide_question_llm(req: QuestionRequest):
     return await handle_screen_input(req)
+
+@app.post("/get-question")
+async def get_question(file: UploadFile = File(...)):
+    # OCR 실행
+    ocr_response = await run_ocr(file)
+    ocr_data = ocr_response.body
+    ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
+
+    # llm 모델을 사용하여 질문 생성
+    visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
+                      for group in ocr_json.get("groups", [])]
+    print("Visible buttons:", visible_buttons)
+    req = QuestionRequest(visible_buttons=visible_buttons)
+    llm_response = await handle_screen_input(req)
+    print("LLM Response:", llm_response)
+    # llm_response.body는 bytes이므로 디코딩 후 파싱
+    llm_json = json.loads(llm_response.body.decode())
+    print("llm_json:", llm_json)
+    response_data = llm_json.get("response", llm_json)
+    follow_up_question = response_data.get("follow_up_question", "")
+    options = response_data.get("choices", [])
+
+    tts_file = None
+    if follow_up_question:
+        tts_file = get_tts("question", follow_up_question)
+
+    return JSONResponse(content={
+        "follow_up_question": follow_up_question,
+        "choices": options,
+        "tts_file": tts_file
+    })
