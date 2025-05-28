@@ -174,3 +174,7 @@ cython_debug/
 .pypirc
 
 .env
+
+*.json
+
+.DS_Store
