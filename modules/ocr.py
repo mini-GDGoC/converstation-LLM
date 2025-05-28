@@ -6,7 +6,7 @@ from PIL import Image
 import cv2
 import io
 from paddleocr import PaddleOCR
-
+from sklearn.cluster import DBSCAN
 # ocr reader
 # reader = easyocr.Reader(['ko', 'en'])
 
@@ -58,7 +58,6 @@ async def run_ocr(file: UploadFile = File(...)):
                 y_coords = [int(p[1]) for p in box]
                 x_min, x_max = min(x_coords), max(x_coords)
                 y_min, y_max = min(y_coords), max(y_coords)
-
                 buttons.append({
                     "text": text,
                     "confidence": float(score),
@@ -67,14 +66,52 @@ async def run_ocr(file: UploadFile = File(...)):
                         "y": y_min,
                         "width": x_max - x_min,
                         "height": y_max - y_min
-                    }
+                    },
+                    "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
                 })
 
+    # 중심 좌표 추출
+    centers = np.array([b["center"] for b in buttons])
+
+    # DBSCAN 클러스터링 (eps: 거리 임계값, min_samples: 최소 그룹 크기)
+    if len(centers) > 0:
+        clustering = DBSCAN(eps=103, min_samples=1).fit(centers)
+        for idx, label in enumerate(clustering.labels_):
+            buttons[idx]["group"] = int(label)
+
+    # group별로 묶어서 반환
+    grouped_buttons = {}
+    for b in buttons:
+        group_id = b.get("group", 0)
+        grouped_buttons.setdefault(group_id, []).append(b)
+
+    # 그룹별 text, bbox 합치기
+    merged_groups = []
+    for group_id, group in grouped_buttons.items():
+        texts = [item["text"] for item in group]
+        # bbox 합치기: 모든 박스를 감싸는 최소 사각형
+        x_min = min(item["bbox"]["x"] for item in group)
+        y_min = min(item["bbox"]["y"] for item in group)
+        x_max = max(item["bbox"]["x"] + item["bbox"]["width"] for item in group)
+        y_max = max(item["bbox"]["y"] + item["bbox"]["height"] for item in group)
+        merged_groups.append({
+            "group": group_id,
+            "text": " ".join(texts),
+            "bbox": {
+                "x": x_min,
+                "y": y_min,
+                "width": x_max - x_min,
+                "height": y_max - y_min
+            },
+            "count": len(group)
+        })
+
     return JSONResponse(content={
-        "buttons": buttons,
+        "groups": merged_groups,
         "count": len(buttons)
     })
 
+# 프로젝트가 완료될때까지 지우시마시오. 언제 이 방법으로 돌아갈지 모름 !!
 # async def run_ocr(file: UploadFile = File(...)):
 #     # image load
 #     image_bytes = await file.read()
