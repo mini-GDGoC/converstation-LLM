@@ -28,6 +28,8 @@ from langchain.memory import ConversationBufferMemory
 from fastapi.responses import JSONResponse
 from langchain_core.messages import BaseMessage
 from langchain.prompts import PromptTemplate
+from modules.tts import get_tts, TTS_testReq
+from modules.stt import get_stt, STT_testReq
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest
 
@@ -56,6 +58,16 @@ async def startup():
 def read_root():
     return {"message": f"Update"}
 
+
+@app.post("/test_tts")
+async def test_tts(req: TTS_testReq):
+    return get_tts(req.fileName, req.text)
+
+
+@app.post("/stt-test")
+async def stt_test(req: STT_testReq):
+    return get_stt(req.fileName)
+
 # easyocr
 @app.post("/ocr-test")
 async def ocr_test(file: UploadFile = File(...)):
@@ -73,4 +85,3 @@ async def reset_button_llm():
 @app.post("/divide_question/chat") 
 async def divide_question_llm(req: QuestionRequest):
     return await handle_screen_input(req)
-
