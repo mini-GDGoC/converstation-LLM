@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 import io
 import time
-# from paddleocr import PaddleOCR
+
 
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
@@ -17,7 +17,7 @@ from modules.models import MenuItem
 from modules.get_button_llm import get_button, reset_button_memory
 from modules.divide_question_llm import divide_question, reset_divide_memory
 from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory
-from modules.ocr import ocr
+from modules.ocr import run_ocr
 
 import os
 
@@ -59,7 +59,7 @@ def read_root():
 # easyocr
 @app.post("/ocr-test")
 async def ocr_test(file: UploadFile = File(...)):
-    return await ocr(file)
+    return await run_ocr(file)
 
 
 @app.post("/get_button/chat") 
