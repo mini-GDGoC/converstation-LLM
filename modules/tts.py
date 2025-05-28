@@ -27,7 +27,7 @@ def get_tts(fileName, text):
     return f"./output/{fileName}.mp3"
 
 
-def get_tts_file_obj():
+def get_tts_file_obj(text):
     synthesis_input = texttospeech.SynthesisInput(text=text)
     resp = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
     return resp.audio_content
