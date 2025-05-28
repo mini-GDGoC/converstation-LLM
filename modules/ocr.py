@@ -31,7 +31,7 @@ async def run_ocr(file: UploadFile = File(...)):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     image_np = np.array(image)
 
-      # ----------- 밝은 부분만 마스킹 시작 -----------
+    # ----------- 밝은 부분만 마스킹 시작 -----------
     gray = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
 
     # CLAHE로 대비 향상
