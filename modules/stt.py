@@ -40,13 +40,13 @@ config = {
   }
 }
 
-def get_stt(fileName) -> str:
+def get_stt(file_name) -> str:
     # 응답 실패하면 공스트링 보냄
     resp = requests.post(
         'https://openapi.vito.ai/v1/transcribe',
         headers={'Authorization': f'Bearer {jwt_token}'},
         data={'config': json.dumps(config)},
-        files={'file': open(fileName, 'rb')}
+        files={'file': open(file_name, 'rb')}
     )
     print("전송",resp.json())
 
@@ -68,6 +68,36 @@ def get_stt(fileName) -> str:
             # {'id': 'R40mABXkSdq3mut7N0XI4Q', 'status': 'completed', 'results': {'utterances': [{'start_at': 635, 'duration': 4310, 'spk': 0, 'spk_type': 'NORMAL', 'msg': '아아아아 가나다라 마바사 가나다라 마바사.'}], 'verified': False}}
             msg = resp.json()['results']['utterances'][0]['msg']
             print(resp.json())
+            break
+
+        sleep(4)
+    return msg
+
+
+def get_stt_from_file_obj(file_obj, filename: str, mimetype: str) -> str:
+    resp = requests.post(
+        'https://openapi.vito.ai/v1/transcribe',
+        headers={'Authorization': f'Bearer {jwt_token}'},
+        data={'config': json.dumps(config)},
+        files={'file': (filename, file_obj, mimetype)}, # 필요시 mimetype 변경
+    )
+    print("전송", resp.json())
+
+    transcribe_id = resp.json()['id']
+    msg = ''
+
+    while True:
+        resp = requests.get(
+            'https://openapi.vito.ai/v1/transcribe/' + transcribe_id,
+            headers={'Authorization': 'bearer ' + jwt_token},
+        )
+        resp.raise_for_status()
+        print(resp.json())
+
+        if resp.json()['status'] != 'transcribing':
+            if resp.json()['status'] != 'completed':
+                return ""
+            msg = resp.json()['results']['utterances'][0]['msg']
             break
 
         sleep(4)
