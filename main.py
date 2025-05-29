@@ -2,7 +2,9 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 import cv2
 import numpy as np
+import json
 
+from pydantic import BaseModel
 
 from PIL import Image
 import io
@@ -29,7 +31,7 @@ from fastapi.responses import JSONResponse
 from langchain_core.messages import BaseMessage
 from langchain.prompts import PromptTemplate
 from modules.tts import get_tts, TTS_testReq
-from modules.stt import get_stt, STT_testReq
+from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest
 
@@ -85,3 +87,38 @@ async def reset_button_llm():
 @app.post("/divide_question/chat") 
 async def divide_question_llm(req: QuestionRequest):
     return await handle_screen_input(req)
+
+
+
+@app.post("/get_action")
+async def get_action(file: UploadFile = File(...)):
+
+    user_answer = get_stt_from_file_obj(file.file, file.filename, file.content_type)
+
+    result = await handle_user_input(ButtonRequest(
+        message=user_answer,
+    ))
+
+    result = json.loads(result.body)["response"]
+    if result["matched_button"] is None:
+        # 매치 되는 버튼이 없음
+        follow_up_question = result["follow_up_question"]
+        options = result["choices"]
+
+        follow_up_question_audio = get_tts("follow_up_question", follow_up_question)
+
+
+        return
+
+
+
+    else:
+        # 매치 되는 버튼이 있음
+        button = result["matched_button"]
+        # 버튼 이름으로 버튼을 찾음
+        pass
+
+
+
+
+    return result

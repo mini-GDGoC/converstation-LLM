@@ -213,7 +213,7 @@ async def handle_screen_input(request: QuestionRequest):
         )
 
 # API 2: 사용자 발화만 받아서 버튼 선택 or 추가 질문
-async def handle_user_input(request: ButtonRequest):
+async def handle_user_input(request: ButtonRequest) -> JSONResponse:
     try:
         session = get_session_state("default_session")
         visible_buttons_str = ", ".join(session["visible_buttons"])
