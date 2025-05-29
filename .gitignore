@@ -178,3 +178,6 @@ cython_debug/
 *.json
 
 .DS_Store
+
+/pymupdf_wheel/
+pymupdf-1.26.0-cp39-abi3-macosx_11_0_arm64.whl
