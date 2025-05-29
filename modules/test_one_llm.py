@@ -73,13 +73,14 @@ prompt = ChatPromptTemplate.from_messages([
 ## 행동 지침
 
 ### 상황 1: 어르신이 아직 말씀하지 않으셨을 때 (input이 비어있음)
-- 현재 화면의 버튼들을 보고 할 수 있는 질문을 만들어주세요
+- 현재 화면의 버튼들을 보고 할 수 있는 질문을 만들어주세요. 
+예) 매장, 포장 버튼이 있다면 "어르신, 매장에서 드실 건가요, 아니면 포장해 가실 건가요?" 처럼 질문을 만드세요.
+    버튼에 메뉴 이름이 많다면, 매뉴를 선택하는 화면입니다. **메뉴 선택 화면에서는 메뉴 데이터베이스의 계층 구조를 최우선으로 따라서 선택지를 제시해주세요**
 - 어르신들에게 친절한 말투로 안내해주세요.
-- **메뉴 선택 화면에서는 메뉴 데이터베이스의 계층 구조를 최우선으로 따라서 선택지를 제시해주세요**
 - 만약 버튼에 "추천 메뉴"가 있다면, 내용에서 제외해주세요
 - 최상위 카테고리(parent_id가 비어있는 항목들)설정해주세요부터 시작하여 이모지와 함께 친근하게 안내해주세요
 - 이때는 matched_button을 반드시 null로 해주세요
-- `visible_button`의 요소들 중 중복되는 내용은 제외하고, 자연스러운 명사들을 `choices`의 요소로 반환해주세요.
+- `visible_button` 중 적절한 것들을 `choices`의 요소로 반환해주세요.
 
 ### 상황 2: 어르신이 말씀해주셨을 때 (input이 존재함)
 
@@ -144,9 +145,13 @@ prompt = ChatPromptTemplate.from_messages([
 
 ## 응답 형식
 반드시 아래 JSON 형식으로만 응답해주세요:
+```json
+{{
   "matched_button": "일치하는 버튼 이름 또는 null",
   "follow_up_question": "어르신께 드릴 질문 또는 빈 문자열",
   "choices": ["선택지1", "선택지2", "선택지3"] // 또는 빈 배열
+}} 
+```
 
 ## 중요 규칙
 1. **메뉴 선택 시에는 메뉴 데이터베이스의 계층 구조를 최우선으로 따라야 합니다**
@@ -190,6 +195,7 @@ async def handle_screen_input(request: QuestionRequest):
         session = get_session_state("default_session")
         session["visible_buttons"] = request.visible_buttons
 
+        print("Visible buttons:", session["visible_buttons"])
         visible_buttons_str = ", ".join([b["text"] for b in request.visible_buttons])
 
         raw_response = conversation_chain.invoke(
@@ -202,7 +208,7 @@ async def handle_screen_input(request: QuestionRequest):
             },
             config={"configurable": {"session_id": "default_session"}}
         )
-
+        print("Raw response:", raw_response.content)
         response = extract_json_from_llm(raw_response)
 
         session["question"] = response.get("follow_up_question", "")
@@ -220,7 +226,7 @@ async def handle_screen_input(request: QuestionRequest):
 async def handle_user_input(request: ButtonRequest):
     try:
         session = get_session_state("default_session")
-        visible_buttons_str = ", ".join(session["visible_buttons"])
+        visible_buttons_str = ", ".join([b["text"] for b in session["visible_buttons"]])
 
         raw_response = conversation_chain.invoke(
             {

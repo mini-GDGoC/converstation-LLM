@@ -7,6 +7,7 @@ import cv2
 import io
 from paddleocr import PaddleOCR
 from sklearn.cluster import DBSCAN
+import re
 # ocr reader
 # reader = easyocr.Reader(['ko', 'en'])
 
@@ -58,17 +59,18 @@ async def run_ocr(file: UploadFile = File(...)):
                 y_coords = [int(p[1]) for p in box]
                 x_min, x_max = min(x_coords), max(x_coords)
                 y_min, y_max = min(y_coords), max(y_coords)
-                buttons.append({
-                    "text": text,
-                    "confidence": float(score),
-                    "bbox": {
-                        "x": x_min,
-                        "y": y_min,
-                        "width": x_max - x_min,
-                        "height": y_max - y_min
-                    },
-                    "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
-                })
+                if not re.match(r".+[을를이가은는도까]$", text):
+                    buttons.append({
+                        "text": text,
+                        "confidence": float(score),
+                        "bbox": {
+                            "x": x_min,
+                            "y": y_min,
+                            "width": x_max - x_min,
+                            "height": y_max - y_min
+                        },
+                        "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
+                    })
 
     # 중심 좌표 추출
     centers = np.array([b["center"] for b in buttons])
