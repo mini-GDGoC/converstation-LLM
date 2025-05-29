@@ -15,8 +15,9 @@ async def get_question_from_image(file: UploadFile):
     # llm 모델을 사용하여 질문 생성
     visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
                       for group in ocr_json.get("groups", [])]
+    scrollbar_exists = ocr_json.get("sidebar_exists", False)
     print("Visible buttons:", visible_buttons)
-    req = QuestionRequest(visible_buttons=visible_buttons)
+    req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists)
     llm_response = await handle_screen_input(req)
     print("LLM Response:", llm_response)
     # llm_response.body는 bytes이므로 디코딩 후 파싱

@@ -33,6 +33,7 @@ def get_session_state(session_id: str):
         store[session_id] = {
             "history": InMemoryChatMessageHistory(),
             "visible_buttons": [],
+            "side_bar_exists": False,
             "question": "",
             "screen_type": ""
         }
@@ -194,6 +195,7 @@ async def handle_screen_input(request: QuestionRequest):
     try:
         session = get_session_state("default_session")
         session["visible_buttons"] = request.visible_buttons
+        session["side_bar_exists"] = request.side_bar_exists
 
         print("Visible buttons:", session["visible_buttons"])
         visible_buttons_str = ", ".join([b["text"] for b in request.visible_buttons])

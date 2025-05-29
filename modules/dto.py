@@ -14,3 +14,4 @@ class ButtonRequest(BaseModel):
 
 class QuestionRequest(BaseModel):
     visible_buttons: List[Dict[str, Any]] = []
+    side_bar_exists: bool = False
