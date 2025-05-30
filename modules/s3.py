@@ -1,5 +1,8 @@
 import boto3
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # AWS 자격증명과 리전 설정
 aws_access_key_id = os.getenv("S3_ACCESS_KEY")
