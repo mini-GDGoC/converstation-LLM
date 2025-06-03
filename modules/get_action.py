@@ -18,8 +18,9 @@ async def get_action_from_audio(file: UploadFile = File(...)):
     ))
     print(json.loads(result.body), 'llm 응답 반환')
     result = json.loads(result.body)["response"]
+    session = get_session_state("default_session")
 
-    if result["matched_button"] is None:
+    if result["matched_button"] is None and session["side_bar_exists"] == False:
         # 매치 되는 버튼이 없음
         follow_up_question = result["follow_up_question"]
         options = result["choices"]
@@ -36,13 +37,18 @@ async def get_action_from_audio(file: UploadFile = File(...)):
             "choices": options,
             "user_answer": user_answer,
         }
+    elif result["matched_button"] is None and session["side_bar_exists"] != False:
+
+        # 여기서 스크롤 버튼을 어떻게 찾음?
+        print()
+
+        return ""
     else:
         # 매치 되는 버튼이 있음
         print("매치되는 버튼이 있음")
         button = result["matched_button"]
         # 버튼 이름으로 버튼을 찾음
 
-        session = get_session_state("default_session")
         first_match = next(
             (d for d in session["visible_buttons"] if d.get("text") == button),
         )
