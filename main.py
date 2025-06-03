@@ -17,12 +17,21 @@ from modules.tts import get_tts, TTS_testReq
 from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # .env 불러오기
 load_dotenv()
 
 # FastAPI 인스턴스
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
 
 
 @app.on_event("startup")
