@@ -86,7 +86,8 @@ async def get_question(file: UploadFile = File(...)):
 async def get_action(file: UploadFile = File(...)):
     """
     사용자의 음성 파일을 주면 응답반환
-    버튼을 찾은 경우
+    버튼을 찾은 경우 클릭이면 버튼 시작 좌표와 높이 정보줌
+    사이드 바도 시작 좌표와 너비 높이 줌
 
         {
             "action": "click" or "scroll",
