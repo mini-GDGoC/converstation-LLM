@@ -29,11 +29,12 @@ async def get_question_from_image(file: UploadFile):
     ocr_data = ocr_response.body
     ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
 
-    # llm 모델을 사용하여 질문 생성
+    # 버튼 추출
     visible_buttons = [
     {"text": clean_text(group["text"]), "bbox": group["bbox"]}
     for group in ocr_json.get("groups", [])]
 
+    # 스크롤바 추출
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
     scrollbar_exists_bool = bool(scrollbar_exists)
     if scrollbar_exists_bool:
@@ -43,6 +44,9 @@ async def get_question_from_image(file: UploadFile):
 
 
     print("Visible buttons:", visible_buttons)
+    print("Scrollbar exists:", scrollbar_exists_bool)
+
+    # LLM 요청
     req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool)
     llm_response = await handle_screen_input(req)
     print("LLM Response:", llm_response)

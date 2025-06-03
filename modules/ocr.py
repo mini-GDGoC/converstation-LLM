@@ -163,7 +163,7 @@ async def run_ocr(file: UploadFile = File(...)):
 #         "buttons": buttons,
 #     })
 
-def detect_right_sidebar(image_np, sidebar_width=30, gray_min=100, gray_max=200, min_height_ratio=0.5):
+def detect_right_sidebar(image_np, sidebar_width=30, gray_min=100, gray_max=200, min_height_ratio=0.3):
     """
     이미지에서 회색 계열의 사이드바(스크롤바 등)를 찾아 bounding box 추출
     """
@@ -179,7 +179,7 @@ def detect_right_sidebar(image_np, sidebar_width=30, gray_min=100, gray_max=200,
 
     for cnt in contours:
         x, y, ww, hh = cv2.boundingRect(cnt)
-        if hh > h * min_height_ratio and ww > 5:
+        if hh > h * min_height_ratio and ww >=1:
             sidebar_boxes.append((x, y, ww, hh))
 
     # 가장 오른쪽에 있는 박스를 사이드바로 간주

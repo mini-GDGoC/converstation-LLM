@@ -111,7 +111,7 @@ async def get_action(file: UploadFile = File(...)):
     return await get_action_from_audio(file)
 
 @app.post("/get-action-scroll")
-async def get_action_scroll(file: UploadFile = File(...), message: str = Form(...)):
+async def get_action_scroll(image_file: UploadFile = File(...), audio_file: UploadFile = File(...)):
     """
     스크롤 api
 
@@ -127,7 +127,7 @@ async def get_action_scroll(file: UploadFile = File(...), message: str = Form(..
     # 스크롤이 존재했을 경우, 스크롤 한 화면을 새롭게 받아서, 그 전 사용자의 답변을 기반으로 answer_text, answer_audio, action(click | scroll)) response
 
     # OCR 실행
-    ocr_response = await run_ocr(file)
+    ocr_response = await run_ocr(image_file)
     ocr_data = ocr_response.body
     ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
 
@@ -138,24 +138,9 @@ async def get_action_scroll(file: UploadFile = File(...), message: str = Form(..
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
     scrollbar_exists_bool = bool(scrollbar_exists)
     print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
-    req = ScrollRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool, message=message)
-    llm_response = await scroll_action(req)
-    print("LLM Response:", llm_response)
-    # llm_response.body는 bytes이므로 디코딩 후 파싱
-    llm_json = json.loads(llm_response.body.decode())
-    print("llm_json:", llm_json)
-    response_data = llm_json.get("response", llm_json)
-    answer_text = response_data.get("follow_up_question", "")
-    options = response_data.get("choices", [])
-    action = response_data.get("matched_button", None)
-
-    tts_file = None
-    if answer_text:
-        tts_file = get_tts("question", answer_text)
-
-    return JSONResponse(content={
-        "answer_text": answer_text,
-        "choices": options,
-        "answer_audio": tts_file,
-        "action": action
-    })
+    
+    session = get_session_state("default_session")
+    session["visible_buttons"] = visible_buttons
+    session["side_bar_exists"] = scrollbar_exists_bool
+    
+    return await get_action(audio_file)
