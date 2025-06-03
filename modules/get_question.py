@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from modules.dto import QuestionRequest
 from modules.ocr import run_ocr
 from modules.test_one_llm import handle_screen_input
-from modules.tts import get_tts
+from modules.tts import get_tts_file_obj, get_tts
+from modules.s3 import upload_obj
 
 async def get_question_from_image(file: UploadFile):
     # OCR 실행
@@ -30,11 +31,12 @@ async def get_question_from_image(file: UploadFile):
 
     tts_file = None
     if follow_up_question:
-        tts_file = get_tts("question", follow_up_question)
+        tts_path = get_tts("question", follow_up_question)  # "./output/question.mp3"
+        s3_url = upload_obj("question.mp3", tts_path)  # ← 경로 넘기기!
 
     return JSONResponse(content={
         "follow_up_question": follow_up_question,
         "choices": options,
-        "tts_file": tts_file,
+        "tts_file": s3_url,
         "sidebar": scrollbar_exists
     })
