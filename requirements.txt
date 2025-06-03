@@ -160,9 +160,9 @@ threadpoolctl==3.6.0
 tifffile==2024.8.30
 tiktoken==0.9.0
 tokenizers==0.19.1
-torch==2.7.0+cpu
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu
 -f https://download.pytorch.org/whl/cpu/torch_stable.html
-torchvision==0.22.0+cpu
 tqdm==4.67.1
 typer==0.15.2
 typing-inspect==0.9.0
