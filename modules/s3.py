@@ -7,7 +7,7 @@ load_dotenv()
 # AWS 자격증명과 리전 설정
 aws_access_key_id = os.getenv("S3_ACCESS_KEY")
 aws_secret_access_key = os.getenv("S3_SECRET_KEY")
-region_name = "ap-northeast-2"  # 예: 서울 리전
+region_name = "ap-southeast-2"  # 시드니 리전
 
 s3 = boto3.client(
     's3',
@@ -36,5 +36,5 @@ s3 = boto3.client(
 
 def upload_obj(bucket_name, object_name, file_obj):
 
-    s3.upload_file(file_obj, bucket_name, object_name, ExtraArgs={'ACL': 'public-read'})
+    s3.upload_file(file_obj, bucket_name, object_name)
     return f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{object_name}"
