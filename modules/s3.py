@@ -34,7 +34,7 @@ s3 = boto3.client(
 
 
 
-def upload_obj(bucket_name, object_name, file_obj):
-
+def upload_obj(object_name, file_obj):
+    bucket_name = "songil-s3"
     s3.upload_file(file_obj, bucket_name, object_name)
     return f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{object_name}"
