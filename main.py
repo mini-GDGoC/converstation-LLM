@@ -12,15 +12,17 @@ import json
 
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
+
+from modules.get_action import get_action_from_audio
 from modules.llm_model import init_model, get_model
 from modules.database import get_db, get_menu_info
 from modules.models import MenuItem
 from modules.get_button_llm import get_button, reset_button_memory
 from modules.divide_question_llm import divide_question, reset_divide_memory
-from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory
+from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory, get_session_state
 from modules.ocr import run_ocr
 from modules.get_question import get_question_from_image
-
+import modules.s3 as s3
 
 import os
 
@@ -32,7 +34,7 @@ from fastapi.responses import JSONResponse
 from langchain_core.messages import BaseMessage
 from langchain.prompts import PromptTemplate
 from modules.tts import get_tts, TTS_testReq
-from modules.stt import get_stt, STT_testReq
+from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest
 
@@ -89,3 +91,7 @@ async def divide_question_llm(req: QuestionRequest):
 @app.post("/get-question")
 async def get_question(file: UploadFile = File(...)):
     return await get_question_from_image(file)
+
+@app.post("/get_action")
+async def get_action(file: UploadFile = File(...)):
+    return await get_action_from_audio(file)
