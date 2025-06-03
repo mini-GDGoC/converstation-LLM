@@ -27,14 +27,14 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         print(follow_up_question, "팔로우업 퀘스쳔")
         follow_up_question_audio = get_tts("follow_up_question", follow_up_question)
         obj_name = "follow_up_question.mp3"
-        bucket_name = "songil-s3"
         obj_url = s3.upload_obj(
-            bucket_name, obj_name, follow_up_question_audio
+            obj_name, follow_up_question_audio
         )
         print(obj_url, 's3url')
         return {
             "follow_up_question_url": obj_url,
-            "choices": options
+            "choices": options,
+            "user_answer": user_answer,
         }
     else:
         # 매치 되는 버튼이 있음
