@@ -18,8 +18,9 @@ async def get_action_from_audio(file: UploadFile = File(...)):
     ))
     print(json.loads(result.body), 'llm 응답 반환')
     result = json.loads(result.body)["response"]
+    session = get_session_state("default_session")
 
-    if result["matched_button"] is None:
+    if result["matched_button"] is None and session["side_bar_exists"] == False:
         # 매치 되는 버튼이 없음
         follow_up_question = result["follow_up_question"]
         options = result["choices"]
@@ -27,14 +28,30 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         print(follow_up_question, "팔로우업 퀘스쳔")
         follow_up_question_audio = get_tts("follow_up_question", follow_up_question)
         obj_name = "follow_up_question.mp3"
-        bucket_name = "songil-s3"
         obj_url = s3.upload_obj(
-            bucket_name, obj_name, follow_up_question_audio
+            obj_name, follow_up_question_audio
         )
         print(obj_url, 's3url')
         return {
             "follow_up_question_url": obj_url,
-            "choices": options
+            "choices": options,
+            "user_answer": user_answer,
+        }
+    elif result["matched_button"] is None and session["side_bar_exists"] != False:
+
+        # 여기서 스크롤 버튼을 어떻게 찾음?
+        x, y, w, h = session["side_bar_point"]
+
+
+        return {
+            "action": "scroll",
+            "text": '사이드바',
+            "bbox":{
+                "x": x,
+                "y": y,
+                "width": w,
+                "height": h,
+            }
         }
     else:
         # 매치 되는 버튼이 있음
@@ -42,10 +59,10 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         button = result["matched_button"]
         # 버튼 이름으로 버튼을 찾음
 
-        session = get_session_state("default_session")
         first_match = next(
             (d for d in session["visible_buttons"] if d.get("text") == button),
         )
 
         # 아직 이 패스로 매칭이 안되어서 테스트 불가
+        first_match["action"] = "click"
         return first_match
