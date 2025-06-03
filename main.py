@@ -104,9 +104,10 @@ async def get_action_scroll(file: UploadFile = File(...),
     visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
                   for group in ocr_json.get("groups", [])]
     # sidebar_exists를 bool로 변환
-    scrollbar_exists = bool(ocr_json.get("sidebar_exists", False))
+    scrollbar_exists = ocr_json.get("sidebar_exists", False)
+    scrollbar_exists_bool = bool(scrollbar_exists)
     print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
-    req = ScrollRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists, message=message)
+    req = ScrollRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool, message=message)
     llm_response = await scroll_action(req)
     print("LLM Response:", llm_response)
     # llm_response.body는 bytes이므로 디코딩 후 파싱
