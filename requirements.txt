@@ -123,7 +123,7 @@ pycryptodome==3.23.0
 pydantic==2.11.3
 pydantic_core==2.33.1
 Pygments==2.19.1
-PyMuPDF==1.23.22
+PyMuPDF==1.20.2
 PyMuPDFb==1.23.22
 pyparsing==3.2.3
 pypdfium2==4.30.1
