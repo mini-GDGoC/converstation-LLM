@@ -1,7 +1,7 @@
 from fastapi.responses import JSONResponse
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from modules.dto import ButtonRequest, QuestionRequest
+from modules.dto import ButtonRequest, QuestionRequest, ScrollRequest
 import os
 import json
 import re
@@ -55,6 +55,7 @@ prompt = ChatPromptTemplate.from_messages([
 - 현재 화면 종류: "{screen_type}"
 - 어르신께서 말씀하신 내용: "{input}"
 - 전체 메뉴 정보: {menu_db}
+- 스크롤 가능 여부: {side_bar_exists}
 
 ## 메뉴 데이터베이스 구조 이해
 메뉴 데이터베이스는 다음과 같은 계층 구조로 되어 있습니다:
@@ -98,7 +99,7 @@ prompt = ChatPromptTemplate.from_messages([
 - 이 경우 matched_button은 null로, follow_up_question에는 설명과 후속 질문을, choices에는 관련 선택지를 제시해주세요
 
 #### 2-2. 화면의 버튼과 일치하는 경우 (가장 우선시해야 함)
-- 어르신 말씀과 현재 화면의 버튼 중 하나가 의미상 연결되거나 유사하다면 **가장 먼저 matched_button으로 간주해야 합니다**
+- 어르신 말씀과 **현재 화면의 버튼** 중 하나가 의미상 연결되거나 유사하다면 **가장 먼저 matched_button으로 간주해야 합니다**
   * 예시: "햄버거" ↔ "버거", "치즈스틱" ↔ "치즈 간식"
 - 이때는 메뉴 계층 탐색보다 **버튼 매칭이 우선**입니다.
 - 매칭 판단 시에는 버튼의 텍스트뿐 아니라 name, description, keywords를 참고하여 유사한 의미로 판단되면 됩니다.
@@ -118,6 +119,8 @@ prompt = ChatPromptTemplate.from_messages([
   * 복잡한 용어 대신 쉬운 말로 설명
   * 선택지는 메뉴 계층에 따라 3-5개 정도로 적당히 제시
   * 이모티콘 없이
+- 화면에 어르신이 찾으시는 메뉴(예: 치즈스틱)가 보이지 않지만, 스크롤 가능 여부가 True이며, 화면에 있는 버튼들과 같은 카테고리인 경우,
+match_buttons 필드에 "scroll" 값을 포함시켜주세요.
 
 ## 메뉴 계층 탐색 예시
 ```
@@ -207,6 +210,7 @@ async def handle_screen_input(request: QuestionRequest):
                 "question": "",
                 "screen_type": "",
                 "menu_db": menu_db['hierarchy_text'],
+                "side_bar_exists": request.side_bar_exists,
             },
             config={"configurable": {"session_id": "default_session"}}
         )
@@ -237,6 +241,7 @@ async def handle_user_input(request: ButtonRequest):
                 "question": session["question"],
                 "screen_type": session["screen_type"],
                 "menu_db": menu_db['hierarchy_text'],
+                "side_bar_exists": session.get("side_bar_exists", False),
             },
             config={"configurable": {"session_id": "default_session"}}
         )
@@ -254,6 +259,44 @@ async def handle_user_input(request: ButtonRequest):
             status_code=500
         )
 
+
+# API 3: 스크롤 변경 후 이미지만 받아옴. 이전 답변을 토대로 대답해야함
+async def scroll_action(request: ScrollRequest):
+    try:
+        session = get_session_state("default_session")
+        session["visible_buttons"] = request.visible_buttons
+        session["side_bar_exists"] = request.side_bar_exists
+
+        print("Visible buttons:", session["visible_buttons"])
+        visible_buttons_str = ", ".join([b["text"] for b in request.visible_buttons])
+
+        raw_response = conversation_chain.invoke(
+            {
+                "input": request.message,
+                "visible_buttons": visible_buttons_str,
+                "question": "",
+                "screen_type": "",
+                "menu_db": menu_db['hierarchy_text'],
+                "side_bar_exists": request.side_bar_exists,
+            },
+            config={"configurable": {"session_id": "default_session"}}
+        )
+        print("Raw response:", raw_response.content)
+        response = extract_json_from_llm(raw_response)
+
+        if not response.get("matched_button") and response.get("follow_up_question"):
+            session["question"] = response["follow_up_question"]
+
+        return JSONResponse(content={"response": response})
+
+    except Exception as e:
+        return JSONResponse(
+            content={"error": f"처리 중 오류가 발생했습니다: {str(e)}"}, 
+            status_code=500
+        )
+
+
+
 async def reset_conversation_memory():
     try:
         if "default_session" in store:
@@ -264,3 +307,5 @@ async def reset_conversation_memory():
         return {"message": "대화 내용이 초기화되었습니다."}
     except Exception as e:
         return {"error": f"초기화 중 오류가 발생했습니다: {str(e)}"}
+
+

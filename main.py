@@ -1,12 +1,10 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 import cv2
 import numpy as np
 
 
-from PIL import Image
-import io
-import time
+
 import json
 
 
@@ -16,8 +14,6 @@ from dotenv import load_dotenv
 from modules.get_action import get_action_from_audio
 from modules.llm_model import init_model, get_model
 from modules.database import get_db, get_menu_info
-from modules.models import MenuItem
-from modules.get_button_llm import get_button, reset_button_memory
 from modules.divide_question_llm import divide_question, reset_divide_memory
 from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory, get_session_state
 from modules.ocr import run_ocr
@@ -36,7 +32,7 @@ from langchain.prompts import PromptTemplate
 from modules.tts import get_tts, TTS_testReq
 from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
-from modules.dto import ChatRequest, ButtonRequest, QuestionRequest
+from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest
 
 # .env 불러오기
 load_dotenv()
@@ -95,3 +91,41 @@ async def get_question(file: UploadFile = File(...)):
 @app.post("/get_action")
 async def get_action(file: UploadFile = File(...)):
     return await get_action_from_audio(file)
+
+@app.post("/get-action-scroll")
+async def get_action_scroll(file: UploadFile = File(...),
+    message: str = Form(...)):
+    # 스크롤이 존재했을 경우, 스크롤 한 화면을 새롭게 받아서, 그 전 사용자의 답변을 기반으로 answer_text, answer_audio, action(click | scroll)) response
+
+    # OCR 실행
+    ocr_response = await run_ocr(file)
+    ocr_data = ocr_response.body
+    ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
+
+    # llm 모델을 사용하여 질문 생성
+    visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
+                  for group in ocr_json.get("groups", [])]
+    # sidebar_exists를 bool로 변환
+    scrollbar_exists = bool(ocr_json.get("sidebar_exists", False))
+    print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
+    req = ScrollRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists, message=message)
+    llm_response = await scroll_action(req)
+    print("LLM Response:", llm_response)
+    # llm_response.body는 bytes이므로 디코딩 후 파싱
+    llm_json = json.loads(llm_response.body.decode())
+    print("llm_json:", llm_json)
+    response_data = llm_json.get("response", llm_json)
+    answer_text = response_data.get("follow_up_question", "")
+    options = response_data.get("choices", [])
+    action = response_data.get("matched_button", None)
+
+    tts_file = None
+    if answer_text:
+        tts_file = get_tts("question", answer_text)
+
+    return JSONResponse(content={
+        "answer_text": answer_text,
+        "choices": options,
+        "answer_audio": tts_file,
+        "action": action
+    })
