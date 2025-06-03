@@ -34,6 +34,7 @@ def get_session_state(session_id: str):
             "history": InMemoryChatMessageHistory(),
             "visible_buttons": [],
             "side_bar_exists": False,
+            "side_bar_point": None,
             "question": "",
             "screen_type": ""
         }

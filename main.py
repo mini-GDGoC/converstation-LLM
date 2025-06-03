@@ -1,34 +1,18 @@
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import JSONResponse
-import cv2
-import numpy as np
-
-
-
 import json
-
-
-import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
 from modules.get_action import get_action_from_audio
 from modules.llm_model import init_model, get_model
 from modules.database import get_db, get_menu_info
 from modules.divide_question_llm import divide_question, reset_divide_memory
+
 from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory, get_session_state, scroll_action
 from modules.ocr import run_ocr
 from modules.get_question import get_question_from_image
-import modules.s3 as s3
 
-import os
-
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
 from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferMemory
 from fastapi.responses import JSONResponse
-from langchain_core.messages import BaseMessage
-from langchain.prompts import PromptTemplate
 from modules.tts import get_tts, TTS_testReq
 from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
@@ -86,15 +70,60 @@ async def divide_question_llm(req: QuestionRequest):
 
 @app.post("/get-question")
 async def get_question(file: UploadFile = File(...)):
+    """
+    스크린 샷을 보내면 사용자에게 질문할 음성과 선택지들을 보내주는 api
+
+        {
+            "follow_up_question": follow_up_question,
+            "choices": options,
+            "tts_file": s3_url,
+            "sidebar": scrollbar_exists
+        }
+    """
     return await get_question_from_image(file)
 
 @app.post("/get_action")
 async def get_action(file: UploadFile = File(...)):
+    """
+    사용자의 음성 파일을 주면 응답반환
+    버튼을 찾은 경우 클릭이면 버튼 시작 좌표와 높이 정보줌
+    사이드 바도 시작 좌표와 너비 높이 줌
+
+        {
+            "action": "click" or "scroll",
+            "text": 버튼이름,
+            "bbox":{
+                "x": x1,
+                "y": y1,
+                "width": x2,
+                "height": y2,
+            }
+        }
+
+    버튼을 찾지 못한 경우
+
+        {
+            "follow_up_question_url": obj_url,
+            "choices": [],
+            "user_answer": user_answer,
+        }
+    """
     return await get_action_from_audio(file)
 
 @app.post("/get-action-scroll")
-async def get_action_scroll(file: UploadFile = File(...),
-    message: str = Form(...)):
+async def get_action_scroll(file: UploadFile = File(...), message: str = Form(...)):
+    """
+    스크롤 api
+
+        {
+            "answer_text": answer_text,
+            "choices": []  //option list,
+            "answer_audio": tts_file_url,
+            "action": action
+        }
+    """
+
+
     # 스크롤이 존재했을 경우, 스크롤 한 화면을 새롭게 받아서, 그 전 사용자의 답변을 기반으로 answer_text, answer_audio, action(click | scroll)) response
 
     # OCR 실행

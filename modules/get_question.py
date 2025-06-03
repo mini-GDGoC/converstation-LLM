@@ -3,7 +3,7 @@ from fastapi import UploadFile
 from fastapi.responses import JSONResponse
 from modules.dto import QuestionRequest
 from modules.ocr import run_ocr
-from modules.test_one_llm import handle_screen_input
+from modules.test_one_llm import handle_screen_input, get_session_state
 from modules.tts import get_tts_file_obj, get_tts
 from modules.s3 import upload_obj
 
@@ -18,6 +18,12 @@ async def get_question_from_image(file: UploadFile):
                       for group in ocr_json.get("groups", [])]
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
     scrollbar_exists_bool = bool(scrollbar_exists)
+    if scrollbar_exists_bool:
+        # 세션에 스크롤바 좌표 업데이트 해줌
+        session = get_session_state("default_session")
+        session["side_bar_point"] = scrollbar_exists
+
+
     print("Visible buttons:", visible_buttons)
     req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool)
     llm_response = await handle_screen_input(req)
@@ -29,14 +35,14 @@ async def get_question_from_image(file: UploadFile):
     follow_up_question = response_data.get("follow_up_question", "")
     options = response_data.get("choices", [])
 
-    tts_file = None
+    tts_file_url = None
     if follow_up_question:
         tts_path = get_tts("question", follow_up_question)  # "./output/question.mp3"
-        s3_url = upload_obj("question.mp3", tts_path)  # ← 경로 넘기기!
+        tts_file_url = upload_obj("question.mp3", tts_path)  # ← 경로 넘기기!
 
     return JSONResponse(content={
         "follow_up_question": follow_up_question,
         "choices": options,
-        "tts_file": s3_url,
+        "tts_file": tts_file_url,
         "sidebar": scrollbar_exists
     })
