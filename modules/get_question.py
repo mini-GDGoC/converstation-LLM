@@ -16,8 +16,9 @@ async def get_question_from_image(file: UploadFile):
     visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
                       for group in ocr_json.get("groups", [])]
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
+    scrollbar_exists_bool = bool(scrollbar_exists)
     print("Visible buttons:", visible_buttons)
-    req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists)
+    req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool)
     llm_response = await handle_screen_input(req)
     print("LLM Response:", llm_response)
     # llm_response.body는 bytes이므로 디코딩 후 파싱
@@ -34,5 +35,6 @@ async def get_question_from_image(file: UploadFile):
     return JSONResponse(content={
         "follow_up_question": follow_up_question,
         "choices": options,
-        "tts_file": tts_file
+        "tts_file": tts_file,
+        "sidebar": scrollbar_exists
     })

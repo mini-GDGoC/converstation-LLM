@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # 요청 바디 모델
 class ChatRequest(BaseModel):
@@ -14,4 +14,9 @@ class ButtonRequest(BaseModel):
 
 class QuestionRequest(BaseModel):
     visible_buttons: List[Dict[str, Any]] = []
-    side_bar_exists: bool = False
+    side_bar_exists: Optional[bool] = False
+
+class ScrollRequest(BaseModel):
+    visible_buttons: List[Dict[str, Any]] = []
+    side_bar_exists: Optional[bool] = False
+    message: str
