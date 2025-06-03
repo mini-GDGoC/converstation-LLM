@@ -17,12 +17,21 @@ from modules.tts import get_tts, TTS_testReq
 from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # .env 불러오기
 load_dotenv()
 
 # FastAPI 인스턴스
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
 
 
 @app.on_event("startup")
@@ -42,33 +51,33 @@ def read_root():
     return {"message": f"Update"}
 
 
-@app.post("/test_tts")
+@app.post("/test_tts", deprecated=True)
 async def test_tts(req: TTS_testReq):
     return get_tts(req.fileName, req.text)
 
 
-@app.post("/stt-test")
+@app.post("/stt-test", deprecated=True)
 async def stt_test(req: STT_testReq):
     return get_stt(req.fileName)
 
-@app.post("/ocr-test")
+@app.post("/ocr-test", deprecated=True)
 async def ocr_test(file: UploadFile = File(...)):
     return await run_ocr(file)
 
 
-@app.post("/get_button/chat") 
+@app.post("/get_button/chat", deprecated=True)
 async def get_button_llm(req: ButtonRequest):
     return await handle_user_input(req)
 
-@app.post("/reset-conversation")
+@app.post("/reset-conversation", deprecated=True)
 async def reset_button_llm():
     return await reset_conversation_memory()
 
-@app.post("/divide_question/chat") 
+@app.post("/divide_question/chat", deprecated=True)
 async def divide_question_llm(req: QuestionRequest):
     return await handle_screen_input(req)
 
-@app.post("/get-question")
+@app.post("/get-question", summary="1번 api 스크린샷을 보내고 사용자에게 보여줄 질문을 받는다.")
 async def get_question(file: UploadFile = File(...)):
     """
     스크린 샷을 보내면 사용자에게 질문할 음성과 선택지들을 보내주는 api
@@ -82,7 +91,7 @@ async def get_question(file: UploadFile = File(...)):
     """
     return await get_question_from_image(file)
 
-@app.post("/get_action")
+@app.post("/get_action", summary="사용자 응답을 바탕으로 좌표를 받거나 추가 질문들 받을 수도, 좌표는 버튼과 스크롤바의 정보를 알려줌")
 async def get_action(file: UploadFile = File(...)):
     """
     사용자의 음성 파일을 주면 응답반환
@@ -112,6 +121,7 @@ async def get_action(file: UploadFile = File(...)):
 
 @app.post("/get-action-scroll")
 async def get_action_scroll(image_file: UploadFile = File(...), audio_file: UploadFile = File(...)):
+
     """
     스크롤 api
 
