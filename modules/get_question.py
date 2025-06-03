@@ -7,15 +7,34 @@ from modules.test_one_llm import handle_screen_input, get_session_state
 from modules.tts import get_tts_file_obj, get_tts
 from modules.s3 import upload_obj
 
+import re
+
+# 오탈자 교정 사전
+TYPO_CORRECTIONS = {
+    "헤이컨버거": "베이컨버거",
+    "쿠포교환권": "쿠폰교환권",
+    "더불패티버거": "더블패티버거"
+}
+
+def clean_text(text: str) -> str:
+    text = re.sub(r"[^\w\s가-힣0-9]", "", text)  # 특수문자 제거
+    text = re.sub(r"([가-힣])(\d+)", r"\1 \2", text)  # "단어숫자" → "단어 숫자"
+    for typo, correct in TYPO_CORRECTIONS.items():
+        text = text.replace(typo, correct)
+    return text.rstrip()
+
 async def get_question_from_image(file: UploadFile):
     # OCR 실행
     ocr_response = await run_ocr(file)
     ocr_data = ocr_response.body
     ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
 
-    # llm 모델을 사용하여 질문 생성
-    visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
-                      for group in ocr_json.get("groups", [])]
+    # 버튼 추출
+    visible_buttons = [
+    {"text": clean_text(group["text"]), "bbox": group["bbox"]}
+    for group in ocr_json.get("groups", [])]
+
+    # 스크롤바 추출
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
     scrollbar_exists_bool = bool(scrollbar_exists)
     if scrollbar_exists_bool:
@@ -25,6 +44,9 @@ async def get_question_from_image(file: UploadFile):
 
 
     print("Visible buttons:", visible_buttons)
+    print("Scrollbar exists:", scrollbar_exists_bool)
+
+    # LLM 요청
     req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool)
     llm_response = await handle_screen_input(req)
     print("LLM Response:", llm_response)

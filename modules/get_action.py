@@ -59,6 +59,7 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         button = result["matched_button"]
         # 버튼 이름으로 버튼을 찾음
 
+        print("버튼이름: ", button)
         first_match = next(
             (d for d in session["visible_buttons"] if d.get("text") == button),
         )
