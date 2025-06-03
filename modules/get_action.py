@@ -40,9 +40,19 @@ async def get_action_from_audio(file: UploadFile = File(...)):
     elif result["matched_button"] is None and session["side_bar_exists"] != False:
 
         # 여기서 스크롤 버튼을 어떻게 찾음?
-        print()
+        x, y, w, h = session["side_bar_point"]
 
-        return ""
+
+        return {
+            "action": "scroll",
+            "text": '사이드바',
+            "bbox":{
+                "x": x,
+                "y": y,
+                "width": w,
+                "height": h,
+            }
+        }
     else:
         # 매치 되는 버튼이 있음
         print("매치되는 버튼이 있음")
@@ -54,4 +64,5 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         )
 
         # 아직 이 패스로 매칭이 안되어서 테스트 불가
+        first_match["action"] = "click"
         return first_match
