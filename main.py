@@ -6,8 +6,8 @@ from modules.get_action import get_action_from_audio
 from modules.llm_model import init_model, get_model
 from modules.database import get_db, get_menu_info
 from modules.divide_question_llm import divide_question, reset_divide_memory
-from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory, get_session_state, \
-    scroll_action
+
+from modules.test_one_llm import handle_screen_input, handle_user_input, reset_conversation_memory, get_session_state, scroll_action
 from modules.ocr import run_ocr
 from modules.get_question import get_question_from_image
 
