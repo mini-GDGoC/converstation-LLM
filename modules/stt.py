@@ -92,7 +92,7 @@ def get_stt_from_file_obj(file_obj, filename: str, mimetype: str) -> str:
             headers={'Authorization': 'bearer ' + jwt_token},
         )
         resp.raise_for_status()
-        print(resp.json())
+        print("stt_resp", resp.json())
 
         if resp.json()['status'] != 'transcribing':
             if resp.json()['status'] != 'completed':
