@@ -78,6 +78,7 @@ async def get_action_from_text(user_message: str):
     result = json.loads(result.body)["response"]
     session = get_session_state("default_session")
 
+    print("scrollbar_exists:", session["side_bar_exists"])
     if result["matched_button"] is None and session["side_bar_exists"] == False:
         # 매치 되는 버튼이 없음
         follow_up_question = result["follow_up_question"]

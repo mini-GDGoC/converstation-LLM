@@ -90,7 +90,7 @@ async def handle_screen_input(request: QuestionRequest):
             },
             config={"configurable": {"session_id": "default_session"}}
         )
-        print("menu_db:", menu_db['hierarchy_text'])
+        # print("menu_db:", menu_db['hierarchy_text'])
         print("Raw response:", raw_response.content)
         response = extract_json_from_llm(raw_response)
 
@@ -158,7 +158,7 @@ async def scroll_action(request: ScrollRequest):
             },
             config={"configurable": {"session_id": "default_session"}}
         )
-        print("menu_db:", menu_db['hierarchy_text'])
+        # print("menu_db:", menu_db['hierarchy_text'])
         print("Raw response:", raw_response.content)
         response = extract_json_from_llm(raw_response)
 

@@ -54,7 +54,7 @@ async def run_ocr(file: UploadFile = File(...)):
 
     for line in ocr_result:
         for box, (text, score) in line:
-            if score > 0.75:
+            if score > 0.6:
                 x_coords = [int(p[0]) for p in box]
                 y_coords = [int(p[1]) for p in box]
                 x_min, x_max = min(x_coords), max(x_coords)
