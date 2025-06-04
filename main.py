@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, UploadFile, Form
 import json
 from dotenv import load_dotenv
 
-from modules.get_action import get_action_from_audio
+from modules.get_action import get_action_from_audio, get_action_from_text
 from modules.llm_model import init_model, get_model
 from modules.database import get_db, get_menu_info
 from modules.divide_question_llm import divide_question, reset_divide_memory
@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from modules.tts import get_tts, TTS_testReq
 from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
 
-from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest
+from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest, TestMessageRequest, TestScrollRequest
 
 # .env 불러오기
 load_dotenv()
@@ -42,31 +42,65 @@ def read_root():
     return {"message": f"Update"}
 
 
-@app.post("/test_tts")
+@app.post("/test/tts")
 async def test_tts(req: TTS_testReq):
     return get_tts(req.fileName, req.text)
 
 
-@app.post("/stt-test")
+@app.post("/test/stt")
 async def stt_test(req: STT_testReq):
     return get_stt(req.fileName)
 
-@app.post("/ocr-test")
+@app.post("/test/ocr")
 async def ocr_test(file: UploadFile = File(...)):
     return await run_ocr(file)
 
 
-@app.post("/get_button/chat") 
+@app.post("/test/get_button/chat") 
 async def get_button_llm(req: ButtonRequest):
     return await handle_user_input(req)
 
-@app.post("/reset-conversation")
+@app.post("/test/reset-conversation")
 async def reset_button_llm():
     return await reset_conversation_memory()
 
-@app.post("/divide_question/chat") 
+@app.post("/test/divide_question/chat") 
 async def divide_question_llm(req: QuestionRequest):
     return await handle_screen_input(req)
+
+@app.post("/test/get-action")
+async def test_get_action(req: TestMessageRequest):
+    return await get_action_from_text(req.message)
+
+@app.post("/test/get-action-scroll")
+async def test_get_action_scroll(image_file: UploadFile = File(...), audio_message: str = Form(...)):
+    # 스크롤이 존재했을 경우, 스크롤 한 화면을 새롭게 받아서, 그 전 사용자의 답변을 기반으로 answer_text, answer_audio, action(click | scroll)) response
+
+    # OCR 실행
+    ocr_response = await run_ocr(image_file)
+    ocr_data = ocr_response.body
+    ocr_json = json.loads(ocr_data.decode())  # bytes → str → dict
+
+    # llm 모델을 사용하여 질문 생성
+    visible_buttons = [{"text": group["text"], "bbox": group["bbox"]}
+                  for group in ocr_json.get("groups", [])]
+    # sidebar_exists를 bool로 변환
+    scrollbar_exists = ocr_json.get("sidebar_exists", False)
+    scrollbar_exists_bool = bool(scrollbar_exists)
+    print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
+    
+    session = get_session_state("default_session")
+    session["visible_buttons"] = visible_buttons
+    session["side_bar_exists"] = scrollbar_exists_bool
+    if scrollbar_exists_bool:
+        # 세션에 스크롤바 좌표 업데이트 해줌
+        x, y, w, h = scrollbar_exists
+        session["side_bar_point"] = (x, y, w, h)
+    
+    audio_message_to_test_request = TestMessageRequest(message=audio_message)
+    return await test_get_action(audio_message_to_test_request)
+
+
 
 @app.post("/get-question")
 async def get_question(file: UploadFile = File(...)):
@@ -142,5 +176,9 @@ async def get_action_scroll(image_file: UploadFile = File(...), audio_file: Uplo
     session = get_session_state("default_session")
     session["visible_buttons"] = visible_buttons
     session["side_bar_exists"] = scrollbar_exists_bool
+    if scrollbar_exists_bool:
+        # 세션에 스크롤바 좌표 업데이트 해줌
+        x, y, w, h = scrollbar_exists
+        session["side_bar_point"] = (x, y, w, h)
     
     return await get_action(audio_file)

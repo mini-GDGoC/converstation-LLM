@@ -20,3 +20,9 @@ class ScrollRequest(BaseModel):
     visible_buttons: List[Dict[str, Any]] = []
     side_bar_exists: Optional[bool] = False
     message: str
+
+class TestMessageRequest(BaseModel):
+    message: str
+
+class TestScrollRequest(BaseModel):
+    audio_message: str
