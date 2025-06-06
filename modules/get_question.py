@@ -70,6 +70,14 @@ async def get_question_from_image(file: UploadFile):
         # 아직 이 패스로 매칭이 안되어서 테스트 불가
         first_match["action"] = "click"
         return first_match
+
+    if response_data.get("matched_button"):
+        matched_button = response_data["matched_button"]
+        first_match = next(
+            (d for d in session["visible_buttons"] if d.get("text") == matched_button),
+        )
+        first_match["action"] = "click"
+        return first_match
             
     return JSONResponse(content={
         "follow_up_question": follow_up_question,

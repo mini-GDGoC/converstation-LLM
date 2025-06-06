@@ -122,6 +122,19 @@ async def get_question(file: UploadFile = File(...)):
             "tts_file": s3_url,
             "sidebar": scrollbar_exists
         }
+    
+    세트 사이드 -> 세트 음료 넘어갈 때
+
+        {
+            "text": "세트 음료",
+            "bbox": {
+                "x": 1380,
+                "y": 391,
+                "width": 138,
+                "height": 36
+            },
+            "action": "click"
+        }
     """
     return await get_question_from_image(file)
 
