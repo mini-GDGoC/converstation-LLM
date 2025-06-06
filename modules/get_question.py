@@ -62,6 +62,15 @@ async def get_question_from_image(file: UploadFile):
         tts_path = get_tts("question", follow_up_question)  # "./output/question.mp3"
         tts_file_url = upload_obj("question.mp3", tts_path)  # ← 경로 넘기기!
 
+    if '세트 음료' in response_data.get("choices"):
+        first_match = next(
+            (d for d in session["visible_buttons"] if d.get("text") == "세트 음료"),
+        )
+
+        # 아직 이 패스로 매칭이 안되어서 테스트 불가
+        first_match["action"] = "click"
+        return first_match
+            
     return JSONResponse(content={
         "follow_up_question": follow_up_question,
         "choices": options,
