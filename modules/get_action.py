@@ -20,8 +20,17 @@ async def get_action_from_audio(file: UploadFile = File(...)):
     result = json.loads(result.body)["response"]
     session = get_session_state("default_session")
 
-    if result["matched_button"] is None and session["side_bar_exists"] == False:
-        # 매치 되는 버튼이 없음
+    """
+    {
+        "matched_button": "일치하는 버튼 이름 또는 null",
+        "follow_up_question": "어르신께 드릴 질문 (없으면 빈 문자열)",
+        "choices": ["선택지1", "선택지2", "(없으면 빈 배열)"] ,
+        "action": "click | scroll | ask"
+    }
+    """
+
+    if result["action"] == "ask":
+        # 재 질문인 경우
         follow_up_question = result["follow_up_question"]
         options = result["choices"]
 
@@ -37,11 +46,9 @@ async def get_action_from_audio(file: UploadFile = File(...)):
             "choices": options,
             "user_answer": user_answer,
         }
-    elif result["matched_button"] is None and session["side_bar_exists"] != False:
-
+    elif result["action"] == "scroll":
         # 여기서 스크롤 버튼을 어떻게 찾음?
         x, y, w, h = session["side_bar_point"]
-
 
         return {
             "action": "scroll",
@@ -79,7 +86,7 @@ async def get_action_from_text(user_message: str):
     session = get_session_state("default_session")
 
     print("scrollbar_exists:", session["side_bar_exists"])
-    if result["matched_button"] is None and session["side_bar_exists"] == False:
+    if result["action"] == "ask":
         # 매치 되는 버튼이 없음
         follow_up_question = result["follow_up_question"]
         options = result["choices"]
@@ -94,9 +101,9 @@ async def get_action_from_text(user_message: str):
         return {
             "follow_up_question_url": obj_url,
             "choices": options,
-            "user_answer": user_answer,
+            "user_answer": user_message,
         }
-    elif result["matched_button"] is None and session["side_bar_exists"] != False:
+    elif result["action"] == "scroll":
 
         # 여기서 스크롤 버튼을 어떻게 찾음?
         x, y, w, h = session["side_bar_point"]
