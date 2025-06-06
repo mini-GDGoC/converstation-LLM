@@ -24,6 +24,8 @@ except Exception as e:
     print(f"❌ PaddleOCR 초기화 실패: {e}")
     raise RuntimeError("OCR 초기화 실패")
 
+stopwords = ["포장오", "드시겠어요", "드시겠어요?"]
+
 
 async def run_ocr(file: UploadFile = File(...)):
     global ocr
@@ -40,12 +42,13 @@ async def run_ocr(file: UploadFile = File(...)):
     enhanced = clahe.apply(gray)
 
     # 밝은 영역만 추출
-    _, mask = cv2.threshold(enhanced, 100, 255, cv2.THRESH_BINARY)
+    _, mask = cv2.threshold(enhanced, 90, 255, cv2.THRESH_BINARY)
     bright_only = cv2.bitwise_and(image_np, image_np, mask=mask)
-    # ----------- 밝은 부분만 마스킹 끝 -----------
+
 
     # OCR 수행
     ocr_result = ocr.ocr(bright_only)
+    # print("OCR 결과:", ocr_result)
 
 
     # ocr_result = ocr.ocr(image_np)
@@ -54,23 +57,25 @@ async def run_ocr(file: UploadFile = File(...)):
 
     for line in ocr_result:
         for box, (text, score) in line:
-            if score > 0.6:
+            if (score > 0.7 and
+                re.search(r"[가-힣0-9]", text) and
+                not re.match(r".+[을를이가은는도까로요겠]$", text) and
+                text.strip() not in stopwords): # 신뢰도 기준
                 x_coords = [int(p[0]) for p in box]
                 y_coords = [int(p[1]) for p in box]
                 x_min, x_max = min(x_coords), max(x_coords)
                 y_min, y_max = min(y_coords), max(y_coords)
-                if not re.match(r".+[을를이가은는도까]$", text):
-                    buttons.append({
-                        "text": text,
-                        "confidence": float(score),
-                        "bbox": {
-                            "x": x_min,
-                            "y": y_min,
-                            "width": x_max - x_min,
-                            "height": y_max - y_min
-                        },
-                        "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
-                    })
+                buttons.append({
+                    "text": text,
+                    "confidence": float(score),
+                    "bbox": {
+                        "x": x_min,
+                        "y": y_min,
+                        "width": x_max - x_min,
+                        "height": y_max - y_min
+                    },
+                    "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
+                })
 
     # 중심 좌표 추출
     centers = np.array([b["center"] for b in buttons])

@@ -11,7 +11,11 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from modules.database import get_menu_info, get_menu_info_for_prompt
-from modules.prompt import test1, test2
+from modules.prompt import test1, test2, test3
+
+from pydantic import BaseModel, ValidationError
+from typing import List, Optional
+
 
 # .env 불러오기
 load_dotenv()
@@ -27,6 +31,13 @@ store = {}
 
 # 메뉴 디비
 menu_db = get_menu_info_for_prompt()
+
+class KioskResponse(BaseModel):
+    matched_button: Optional[str]
+    follow_up_question: str
+    choices: List[str]
+    action: str  # click | ask | scroll
+
 
 def get_session_state(session_id: str):
     if session_id not in store:
@@ -65,9 +76,15 @@ def extract_json_from_llm(raw_response):
     text = raw_response.content.strip()
     json_str = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
     match = re.search(r'\{.*\}', json_str, re.DOTALL)
-    if match:
-        json_str = match.group(0)
-    return json.loads(json_str)
+    if not match:
+        raise ValueError("JSON 응답을 찾을 수 없습니다.")
+    json_block = match.group(0)
+
+    try:
+        parsed = json.loads(json_block)
+        return KioskResponse(**parsed).dict()
+    except (json.JSONDecodeError, ValidationError) as e:
+        raise ValueError(f"JSON 파싱/검증 실패: {str(e)}")
 
 # API 1: 화면 스크린샷을 통한 visible_buttons 전달 및 질문 생성
 async def handle_screen_input(request: QuestionRequest):
@@ -77,7 +94,7 @@ async def handle_screen_input(request: QuestionRequest):
         session["side_bar_exists"] = request.side_bar_exists
 
         print("Visible buttons:", session["visible_buttons"])
-        visible_buttons_str = ", ".join([b["text"] for b in request.visible_buttons])
+        visible_buttons_str = [b["text"] for b in request.visible_buttons]
 
         raw_response = conversation_chain.invoke(
             {
@@ -85,7 +102,7 @@ async def handle_screen_input(request: QuestionRequest):
                 "visible_buttons": visible_buttons_str,
                 "question": "",
                 "screen_type": "",
-                "menu_db": menu_db['hierarchy_text'],
+                "menu_db": menu_db['menu_items'],
                 "side_bar_exists": request.side_bar_exists,
             },
             config={"configurable": {"session_id": "default_session"}}
@@ -96,6 +113,7 @@ async def handle_screen_input(request: QuestionRequest):
 
         session["question"] = response.get("follow_up_question", "")
         session["screen_type"] = response.get("screen_type", "")
+        print("screen_type:", session["screen_type"])
 
         return JSONResponse(content={"response": response})
 
@@ -109,7 +127,7 @@ async def handle_screen_input(request: QuestionRequest):
 async def handle_user_input(request: ButtonRequest):
     try:
         session = get_session_state("default_session")
-        visible_buttons_str = ", ".join([b["text"] for b in session["visible_buttons"]])
+        visible_buttons_str = [b["text"] for b in session["visible_buttons"]]
 
         raw_response = conversation_chain.invoke(
             {
@@ -117,7 +135,7 @@ async def handle_user_input(request: ButtonRequest):
                 "visible_buttons": visible_buttons_str,
                 "question": session["question"],
                 "screen_type": session["screen_type"],
-                "menu_db": menu_db['hierarchy_text'],
+                "menu_db": menu_db['menu_items'],
                 "side_bar_exists": session.get("side_bar_exists", False),
             },
             config={"configurable": {"session_id": "default_session"}}
@@ -153,7 +171,7 @@ async def scroll_action(request: ScrollRequest):
                 "visible_buttons": visible_buttons_str,
                 "question": "",
                 "screen_type": "",
-                "menu_db": menu_db['hierarchy_text'],
+                "menu_db": menu_db['menu_items'],
                 "side_bar_exists": request.side_bar_exists,
             },
             config={"configurable": {"session_id": "default_session"}}
