@@ -113,6 +113,10 @@ async def test_get_action_scroll(image_file: UploadFile = File(...), audio_messa
 
 @app.post("/get-question")
 async def get_question(file: UploadFile = File(...)):
+    # if True:
+    #     await reset_conversation_memory()
+
+
     """
     스크린 샷을 보내면 사용자에게 질문할 음성과 선택지들을 보내주는 api
 
@@ -151,7 +155,8 @@ async def get_action(file: UploadFile = File(...)):
             "user_answer": user_answer,
         }
     """
-    return await get_action_from_audio(file)
+    result = await get_action_from_audio(file)
+    return result if result is not None else {"버튼 찾을수 없음"}
 
 @app.post("/get-action-scroll")
 async def get_action_scroll(image_file: UploadFile = File(...), audio_file: UploadFile = File(...)):

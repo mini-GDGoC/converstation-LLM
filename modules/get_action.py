@@ -67,9 +67,13 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         # 버튼 이름으로 버튼을 찾음
 
         print("버튼이름: ", button)
+        print("비저블버튼스", session["visible_buttons"])
         first_match = next(
             (d for d in session["visible_buttons"] if d.get("text") == button),
+            None
         )
+        if first_match == None:
+            return None
 
         # 아직 이 패스로 매칭이 안되어서 테스트 불가
         first_match["action"] = "click"
@@ -128,7 +132,10 @@ async def get_action_from_text(user_message: str):
         print("버튼이름: ", button)
         first_match = next(
             (d for d in session["visible_buttons"] if d.get("text") == button),
+            None
         )
+        if first_match == None:
+            return None
 
         # 아직 이 패스로 매칭이 안되어서 테스트 불가
         first_match["action"] = "click"
