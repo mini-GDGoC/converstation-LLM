@@ -120,7 +120,7 @@ async def handle_screen_input(request: QuestionRequest):
     except Exception as e:
         return JSONResponse(
             content={"error": f"처리 중 오류가 발생했습니다: {str(e)}"}, 
-            status_code=500
+            status_code=505
         )
 
 # API 2: 사용자 발화만 받아서 버튼 선택 or 추가 질문
@@ -151,7 +151,7 @@ async def handle_user_input(request: ButtonRequest):
     except Exception as e:
         return JSONResponse(
             content={"error": f"처리 중 오류가 발생했습니다: {str(e)}"}, 
-            status_code=500
+            status_code=505
         )
 
 
@@ -188,7 +188,7 @@ async def scroll_action(request: ScrollRequest):
     except Exception as e:
         return JSONResponse(
             content={"error": f"처리 중 오류가 발생했습니다: {str(e)}"}, 
-            status_code=500
+            status_code=505
         )
 
 
