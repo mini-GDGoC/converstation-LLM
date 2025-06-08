@@ -43,6 +43,7 @@ async def get_action_from_audio(file: UploadFile = File(...)):
         print(obj_url, 's3url')
         return {
             "follow_up_question_url": obj_url,
+            "follow_up_question": follow_up_question,
             "choices": options,
             "user_answer": user_answer,
         }
@@ -104,6 +105,7 @@ async def get_action_from_text(user_message: str):
         print(obj_url, 's3url')
         return {
             "follow_up_question_url": obj_url,
+            "follow_up_question": follow_up_question,
             "choices": options,
             "user_answer": user_message,
         }
