@@ -24,7 +24,7 @@ except Exception as e:
     print(f"❌ PaddleOCR 초기화 실패: {e}")
     raise RuntimeError("OCR 초기화 실패")
 
-stopwords = ["포장오", "드시겠어요", "드시겠어요?", "피y위ha", "릉요표", "피iyi위hay"]
+stopwords = ["포장오", "드시겠어요", "드시겠어요?", "피y위ha", "릉요표", "피iyi위hay", "피iyhay"]
 
 
 async def run_ocr(file: UploadFile = File(...)):
