@@ -77,6 +77,7 @@ async def run_ocr(file: UploadFile = File(...)):
                     "center": [(x_min + x_max) // 2, (y_min + y_max) // 2]
                 })
 
+    print("buttons:", buttons)
     # 중심 좌표 추출
     centers = np.array([b["center"] for b in buttons])
 
