@@ -14,7 +14,7 @@ from modules.get_question import get_question_from_image
 from langchain.chains import ConversationChain
 from fastapi.responses import JSONResponse
 from modules.tts import get_tts, TTS_testReq
-from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj
+from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj, jwt_token
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -39,6 +39,7 @@ async def startup():
     init_model()
     print("Model init")
     # print(get_model().invoke("하이")) #실제 모델 동작 하는지 테스트 (주석 처리 해놓지 않으면 리로드 할 때마다 계속 호출 해서 api 사용량 까먹음)
+    a = jwt_token
 
     db = get_db()
     print("DB init")

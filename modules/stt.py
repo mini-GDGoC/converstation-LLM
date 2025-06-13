@@ -19,6 +19,7 @@ def get_jwt_token():
           'client_secret': os.getenv('CLIENT_SECRET'),}
     )
     resp.raise_for_status()
+    print("stt 토큰 발급 성공")
     return resp.json()['access_token']
 
 
