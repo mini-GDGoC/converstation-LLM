@@ -89,7 +89,8 @@ def extract_json_from_llm(raw_response):
 # API 1: 화면 스크린샷을 통한 visible_buttons 전달 및 질문 생성
 async def handle_screen_input(request: QuestionRequest):
     try:
-        session = get_session_state("default_session")
+        session_id = request.session_id
+        session = get_session_state(session_id)
         session["visible_buttons"] = request.visible_buttons
         session["side_bar_exists"] = request.side_bar_exists
 
@@ -105,7 +106,7 @@ async def handle_screen_input(request: QuestionRequest):
                 "menu_db": menu_db['menu_items'],
                 "side_bar_exists": request.side_bar_exists,
             },
-            config={"configurable": {"session_id": "default_session"}}
+            config={"configurable": {"session_id": session_id}}
         )
         # print("menu_db:", menu_db['hierarchy_text'])
         print("Raw response:", raw_response.content)
@@ -126,19 +127,19 @@ async def handle_screen_input(request: QuestionRequest):
 # API 2: 사용자 발화만 받아서 버튼 선택 or 추가 질문
 async def handle_user_input(request: ButtonRequest):
     try:
-        session = get_session_state("default_session")
-        visible_buttons_str = [b["text"] for b in session["visible_buttons"]]
+        session_id = request.session_id
+        session = get_session_state(session_id)
 
         raw_response = conversation_chain.invoke(
             {
                 "input": request.message,
-                "visible_buttons": visible_buttons_str,
+                "visible_buttons": [b["text"] for b in session["visible_buttons"]],
                 "question": session["question"],
                 "screen_type": session["screen_type"],
                 "menu_db": menu_db['menu_items'],
                 "side_bar_exists": session.get("side_bar_exists", False),
             },
-            config={"configurable": {"session_id": "default_session"}}
+            config={"configurable": {"session_id": session_id}}
         )
 
         response = extract_json_from_llm(raw_response)
@@ -158,23 +159,22 @@ async def handle_user_input(request: ButtonRequest):
 # API 3: 스크롤 변경 후 이미지만 받아옴. 이전 답변을 토대로 대답해야함
 async def scroll_action(request: ScrollRequest):
     try:
-        session = get_session_state("default_session")
+        session_id = request.session_id
+        session = get_session_state(session_id)
+
         session["visible_buttons"] = request.visible_buttons
         session["side_bar_exists"] = request.side_bar_exists
-
-        print("Visible buttons:", session["visible_buttons"])
-        visible_buttons_str = ", ".join([b["text"] for b in request.visible_buttons])
 
         raw_response = conversation_chain.invoke(
             {
                 "input": request.message,
-                "visible_buttons": visible_buttons_str,
+                "visible_buttons": ", ".join([b["text"] for b in request.visible_buttons]),
                 "question": "",
                 "screen_type": "",
                 "menu_db": menu_db['menu_items'],
                 "side_bar_exists": request.side_bar_exists,
             },
-            config={"configurable": {"session_id": "default_session"}}
+            config={"configurable": {"session_id": session_id}}
         )
         # print("menu_db:", menu_db['hierarchy_text'])
         print("Raw response:", raw_response.content)
@@ -192,15 +192,28 @@ async def scroll_action(request: ScrollRequest):
         )
 
 
-
-async def reset_conversation_memory():
+async def reset_conversation_memory(session_id: str = None):
     try:
-        if "default_session" in store:
-            store["default_session"]["history"].clear()
-            store["default_session"]["visible_buttons"] = []
-            store["default_session"]["question"] = ""
-            store["default_session"]["screen_type"] = ""
-        return {"message": "대화 내용이 초기화되었습니다."}
+        if session_id:
+            # 특정 세션만 초기화
+            if session_id in store:
+                store[session_id]["history"].clear()
+                store[session_id]["visible_buttons"] = []
+                store[session_id]["question"] = ""
+                store[session_id]["screen_type"] = ""
+                return {"message": f"세션 {session_id}의 대화 내용이 초기화되었습니다."}
+            else:
+                return {"message": f"세션 {session_id}이 존재하지 않습니다."}
+        else:
+            # 모든 세션 초기화
+            count = 0
+            for sess_id in store:
+                store[sess_id]["history"].clear()
+                store[sess_id]["visible_buttons"] = []
+                store[sess_id]["question"] = ""
+                store[sess_id]["screen_type"] = ""
+                count += 1
+            return {"message": f"모든 세션({count}개)의 대화 내용이 초기화되었습니다."}
     except Exception as e:
         return {"error": f"초기화 중 오류가 발생했습니다: {str(e)}"}
 

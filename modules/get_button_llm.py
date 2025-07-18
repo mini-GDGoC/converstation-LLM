@@ -110,6 +110,7 @@ async def get_button(request: ButtonRequest):
     try:
         visible_buttons = ", ".join(request.visible_buttons)
         
+        # "default_session" 대신 request.session_id 사용
         raw_response = conversation_chain.invoke(
             {
                 "input": request.message,
@@ -118,7 +119,7 @@ async def get_button(request: ButtonRequest):
                 "screen_type": request.screen_type,
                 "menu_db": menu_db
             },
-            config={"configurable": {"session_id": "default_session"}}
+            config={"configurable": {"session_id": request.session_id}}
         )
         
         # LLM 응답에서 JSON만 추출
@@ -140,11 +141,22 @@ async def get_button(request: ButtonRequest):
             status_code=500
         )
 
-async def reset_button_memory():
+# reset_button_memory 함수도 수정
+async def reset_button_memory(session_id: str = None):
     try:
-        # 세션 히스토리 초기화
-        if "default_session" in store:
-            store["default_session"].clear()
-        return {"message": "대화 내용이 초기화되었습니다."}
+        if session_id:
+            # 특정 세션만 초기화
+            if session_id in store:
+                store[session_id].clear()
+                return {"message": f"세션 {session_id}의 대화 내용이 초기화되었습니다."}
+            else:
+                return {"message": f"세션 {session_id}이 존재하지 않습니다."}
+        else:
+            # 모든 세션 초기화
+            count = 0
+            for sess_id in store:
+                store[sess_id].clear()
+                count += 1
+            return {"message": f"모든 세션({count}개)의 대화 내용이 초기화되었습니다."}
     except Exception as e:
         return {"error": f"초기화 중 오류가 발생했습니다: {str(e)}"}
