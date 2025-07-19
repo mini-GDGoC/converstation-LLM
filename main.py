@@ -71,8 +71,8 @@ async def get_button_llm(req: ButtonRequest):
     return await handle_user_input(req)
 
 @app.post("/test/reset-conversation", deprecated=True)
-async def reset_button_llm():
-    return await reset_conversation_memory()
+async def reset_button_llm(session_id: str = None):
+    return await reset_conversation_memory(session_id)
 
 @app.post("/test/divide_question/chat", deprecated=True)
 async def divide_question_llm(req: QuestionRequest):
@@ -83,7 +83,7 @@ async def test_get_action(req: TestMessageRequest):
     return await get_action_from_text(req.message)
 
 @app.post("/test/get-action-scroll")
-async def test_get_action_scroll(image_file: UploadFile = File(...), audio_message: str = Form(...)):
+async def test_get_action_scroll(image_file: UploadFile = File(...), audio_message: str = Form(...), session_id: str = Form("default_session")):
     # 스크롤이 존재했을 경우, 스크롤 한 화면을 새롭게 받아서, 그 전 사용자의 답변을 기반으로 answer_text, answer_audio, action(click | scroll)) response
 
     # OCR 실행
@@ -99,7 +99,8 @@ async def test_get_action_scroll(image_file: UploadFile = File(...), audio_messa
     scrollbar_exists_bool = bool(scrollbar_exists)
     print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
     
-    session = get_session_state("default_session")
+    # "default_session" 대신 session_id 사용
+    session = get_session_state(session_id)
     session["visible_buttons"] = visible_buttons
     session["side_bar_exists"] = scrollbar_exists_bool
     if scrollbar_exists_bool:
@@ -107,13 +108,13 @@ async def test_get_action_scroll(image_file: UploadFile = File(...), audio_messa
         x, y, w, h = scrollbar_exists
         session["side_bar_point"] = (x, y, w, h)
     
-    audio_message_to_test_request = TestMessageRequest(message=audio_message)
+    audio_message_to_test_request = TestMessageRequest(message=audio_message, session_id=session_id)
     return await test_get_action(audio_message_to_test_request)
 
 
 
 @app.post("/get-question")
-async def get_question(file: UploadFile = File(...)):
+async def get_question(file: UploadFile = File(...), session_id: str = Form("default_session")):
     # if True:
     #     await reset_conversation_memory()
 
@@ -141,10 +142,10 @@ async def get_question(file: UploadFile = File(...)):
             "action": "click"
         }
     """
-    return await get_question_from_image(file)
+    return await get_question_from_image(file, session_id)
 
 @app.post("/get_action", summary="사용자 응답을 바탕으로 좌표를 받거나 추가 질문들 받을 수도, 좌표는 버튼과 스크롤바의 정보를 알려줌")
-async def get_action(file: UploadFile = File(...)):
+async def get_action(file: UploadFile = File(...), session_id: str = Form("default_session")):
     """
     사용자의 음성 파일을 주면 응답반환
     버튼을 찾은 경우 클릭이면 버튼 시작 좌표와 높이 정보줌
@@ -169,11 +170,11 @@ async def get_action(file: UploadFile = File(...)):
             "user_answer": user_answer,
         }
     """
-    result = await get_action_from_audio(file)
+    result = await get_action_from_audio(file, session_id)
     return result if result is not None else {"버튼 찾을수 없음"}
 
 @app.post("/get-action-scroll")
-async def get_action_scroll(image_file: UploadFile = File(...), audio_file: UploadFile = File(...)):
+async def get_action_scroll(image_file: UploadFile = File(...), audio_file: UploadFile = File(...), session_id= Form("default_session")):
 
     """
     스크롤 api
@@ -201,13 +202,13 @@ async def get_action_scroll(image_file: UploadFile = File(...), audio_file: Uplo
     scrollbar_exists = ocr_json.get("sidebar_exists", False)
     scrollbar_exists_bool = bool(scrollbar_exists)
     print("Visible buttons:", visible_buttons, "scrollbar_exists:", scrollbar_exists)
-    
-    session = get_session_state("default_session")
+
+    session = get_session_state(session_id)
     session["visible_buttons"] = visible_buttons
     session["side_bar_exists"] = scrollbar_exists_bool
     if scrollbar_exists_bool:
         # 세션에 스크롤바 좌표 업데이트 해줌
         x, y, w, h = scrollbar_exists
         session["side_bar_point"] = (x, y, w, h)
-    
-    return await get_action(audio_file)
+
+    return await get_action(audio_file, session_id=session_id)

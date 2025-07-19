@@ -10,15 +10,16 @@ import modules.s3 as s3
 
 
 
-async def get_action_from_audio(file: UploadFile = File(...)):
+async def get_action_from_audio(file: UploadFile = File(...), session_id: str = "default_session"):
     user_answer = get_stt_from_file_obj(file.file, file.filename, file.content_type)
     print(user_answer, "유저응답 변환")
     result = await handle_user_input(ButtonRequest(
         message=user_answer,
+        session_id=session_id,
     ))
     print(json.loads(result.body), 'llm 응답 반환')
     result = json.loads(result.body)["response"]
-    session = get_session_state("default_session")
+    session = get_session_state(session_id=session_id)
 
     """
     {
@@ -82,13 +83,14 @@ async def get_action_from_audio(file: UploadFile = File(...)):
 
 
 
-async def get_action_from_text(user_message: str):
+async def get_action_from_text(user_message: str, session_id: str = "default_session"):
     result = await handle_user_input(ButtonRequest(
         message=user_message,
+        session_id=session_id
     ))
     print(json.loads(result.body), 'llm 응답 반환')
     result = json.loads(result.body)["response"]
-    session = get_session_state("default_session")
+    session = get_session_state(session_id=session_id)
 
     print("scrollbar_exists:", session["side_bar_exists"])
     if result["action"] == "ask":

@@ -25,7 +25,7 @@ def clean_text(text: str) -> str:
         text = text.replace(typo, correct)
     return text.rstrip()
 
-async def get_question_from_image(file: UploadFile):
+async def get_question_from_image(file: UploadFile, session_id: str):
     # OCR 실행
     ocr_response = await run_ocr(file)
     ocr_data = ocr_response.body
@@ -41,7 +41,7 @@ async def get_question_from_image(file: UploadFile):
     scrollbar_exists_bool = bool(scrollbar_exists)
     if scrollbar_exists_bool:
         # 세션에 스크롤바 좌표 업데이트 해줌
-        session = get_session_state("default_session")
+        session = get_session_state(session_id)
         session["side_bar_point"] = scrollbar_exists
 
 
@@ -49,7 +49,7 @@ async def get_question_from_image(file: UploadFile):
     print("Scrollbar exists:", scrollbar_exists_bool)
 
     # LLM 요청
-    req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool)
+    req = QuestionRequest(visible_buttons=visible_buttons, side_bar_exists=scrollbar_exists_bool, session_id=session_id)
     llm_response = await handle_screen_input(req)
     print("LLM Response:", llm_response)
     # llm_response.body는 bytes이므로 디코딩 후 파싱
