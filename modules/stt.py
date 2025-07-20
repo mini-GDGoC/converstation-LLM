@@ -10,9 +10,11 @@ load_dotenv()
 class STT_testReq(BaseModel):
     fileName: str
 
+global jwt_token
 
 # 인증토큰 가져오기
 def get_jwt_token():
+    global jwt_token
     resp = requests.post(
         'https://openapi.vito.ai/v1/authenticate',
         data={'client_id': os.getenv('CLIENT_ID'),
@@ -20,10 +22,11 @@ def get_jwt_token():
     )
     resp.raise_for_status()
     print("stt 토큰 발급 성공")
+    jwt_token = resp.json()['access_token']
     return resp.json()['access_token']
 
 
-jwt_token = get_jwt_token()
+get_jwt_token()
 if not jwt_token:
     raise ValueError("환경변수 'YOUR_JWT_TOKEN'이 설정되지 않았습니다.")
 
@@ -43,6 +46,7 @@ config = {
 
 def get_stt(file_name) -> str:
     # 응답 실패하면 공스트링 보냄
+    global jwt_token
     resp = requests.post(
         'https://openapi.vito.ai/v1/transcribe',
         headers={'Authorization': f'Bearer {jwt_token}'},
@@ -76,6 +80,7 @@ def get_stt(file_name) -> str:
 
 
 def get_stt_from_file_obj(file_obj, filename: str, mimetype: str) -> str:
+    global jwt_token
     resp = requests.post(
         'https://openapi.vito.ai/v1/transcribe',
         headers={'Authorization': f'Bearer {jwt_token}'},

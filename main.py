@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, File, UploadFile, Form
 import json
 from dotenv import load_dotenv
@@ -14,9 +16,10 @@ from modules.get_question import get_question_from_image
 from langchain.chains import ConversationChain
 from fastapi.responses import JSONResponse
 from modules.tts import get_tts, TTS_testReq
-from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj, jwt_token
+from modules.stt import get_stt, STT_testReq, get_stt_from_file_obj, jwt_token, get_jwt_token
 
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollRequest, TestMessageRequest, TestScrollRequest
 
@@ -45,6 +48,16 @@ async def startup():
     print("DB init")
     # for i in db.query(MenuItem).all():
     #     print(i.id, i.parent_id, i.name, i.description, i.emoji, i.keywords)
+
+
+@app.on_event("startup")
+async def shutdown():
+    async def get_token():
+        while True:
+            print("토큰 가져오기 비동기 작업")
+            get_jwt_token()
+            await asyncio.sleep(21600)
+    await get_token()
 
 
 @app.get("/")
