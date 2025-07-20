@@ -23,7 +23,7 @@ from modules.dto import ChatRequest, ButtonRequest, QuestionRequest, ScrollReque
 # .env 불러오기
 load_dotenv()
 
-# FastAPI 인스턴스
+# FastAPI 인스턴스 추가
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
